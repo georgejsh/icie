@@ -4,7 +4,7 @@ use futures::channel::oneshot;
 use std::{
 	future::Future, pin::Pin, time::{Duration, SystemTime}
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 
 pub async fn read_dir(path: &Path) -> R<Vec<Path>> {

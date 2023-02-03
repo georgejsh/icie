@@ -4,7 +4,7 @@ pub mod scan;
 pub mod view;
 
 use crate::{
-	compile::{self, Codegen}, dir, test::{judge::simple_test, scan::scan_for_tests}, util, util::{fs, path::Path, SourceTarget, workspace_root_vscode}
+	compile::{self, Codegen}, dir, test::{judge::simple_test, scan::scan_for_tests}, util, util::{fs, path::Path, SourceTarget}
 };
 use evscode::R;
 use std::time::Duration;

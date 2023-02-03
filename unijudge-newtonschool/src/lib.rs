@@ -1,20 +1,19 @@
 #![feature(try_blocks)]
 use markdown;
-use html_escape;
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::{future::Future, pin::Pin, sync::Mutex};
+use std::{sync::Mutex};
 use http::{
 	StatusCode
 };
 
-use node_sys::console;
+
 use unijudge::{
     Problem,
-	chrono::{prelude::*,Duration},
-	debris::{ Document, Find}, http::{Client, Cookie}, json, log::{debug, error}, reqwest::{ Url,header::{CONTENT_TYPE, REFERER}}, ContestDetails, ContestTime, ErrorCode, Language, RejectionCause, Resource, Result, Statement, Submission, TaskDetails, Verdict
+	chrono::{prelude::*}, http::{Client}, json, log::{debug}, reqwest::{ Url}, ContestDetails, ContestTime, ErrorCode, Language, RejectionCause, Resource, Result, Statement, Submission, TaskDetails, Verdict
 };
-use unescape::unescape;
+
 #[derive(Debug)]
 pub struct NewtonSchool;
 
@@ -139,15 +138,15 @@ impl unijudge::Backend for NewtonSchool {
 		Some(task.contest.clone())
 	}
 
-	async fn rank_list(&self, session: &Self::Session, task: &Self::Task) -> Result<String>{
+	async fn rank_list(&self, _session: &Self::Session, _task: &Self::Task) -> Result<String>{
 		return Ok("NA".to_string());
 	}
 	
-    async fn problems_list(&self, session: &Self::Session, task: &Self::Task) -> Result<Vec<Problem>>{
+    async fn problems_list(&self, _session: &Self::Session, _task: &Self::Task) -> Result<Vec<Problem>>{
 		return Ok(Vec::new());
 	}
 
-	async fn remain_time(&self, session: &Self::Session, task: &Self::Task) -> Result<i64>{
+	async fn remain_time(&self, _session: &Self::Session, _task: &Self::Task) -> Result<i64>{
 		return Err(ErrorCode::AlienInvasion.into());
 	}
 
@@ -197,7 +196,7 @@ impl unijudge::Backend for NewtonSchool {
 	}
 	
 
-	async fn task_languages(&self, session: &Self::Session, task: &Self::Task) -> Result<Vec<Language>> {
+	async fn task_languages(&self, _session: &Self::Session, _task: &Self::Task) -> Result<Vec<Language>> {
 		Ok(vec![ Language { id: "54".to_owned(), name: "C++ (GCC 9.2.0)".to_owned()}])
 	}
 
@@ -247,7 +246,7 @@ impl unijudge::Backend for NewtonSchool {
 	) ->Result<String>{
 		// 
 		session.req_token()?;
-		let resp_raw = session
+		let _resp_raw = session
 		.client
 		.patch(self.submission_url(session,task,"").parse()?)
 		.header("Authorization","Bearer ".to_owned()+&session.req_token().unwrap())
@@ -266,7 +265,7 @@ impl unijudge::Backend for NewtonSchool {
 		//let resp2 = json::from_str::<api::TaskDetails>(&resp_raw)?;  
 	}
 
-	fn submission_url(&self, _session: &Self::Session, _task: &Self::Task, id: &str) -> String {
+	fn submission_url(&self, _session: &Self::Session, _task: &Self::Task, _id: &str) -> String {
 		format!("https://my.newtonschool.co/api/v1/playground/coding/h/{}/?run_hidden_test_cases=true",_task.task)
 	}
 
@@ -344,7 +343,7 @@ impl NewtonSchool {
 
 	async fn contest_details_ex(&self, session: &Session, contest: &Contest) -> Result<ContestDetailsEx> {
 		//console::debug("Come here1");
-		let  taks: Vec<Task> =Vec::new();
+		let  _taks: Vec<Task> =Vec::new();
 			// CodeChef does not sort problems by estimated difficulty, contrary to
 			// Codeforces/AtCoder. Instead, it sorts them by submission count. This is problematic
 			// when contest begin, as all problems have a submit count of 0. But since this naive
@@ -439,7 +438,7 @@ impl NewtonSchool {
 	/// problem from a different division. This function performs an additional HTTP request to take
 	/// this into account.
     
-	async fn active_submit_url(&self, task: &Task, session: &Session) -> Result<Url> {
+	async fn active_submit_url(&self, _task: &Task, _session: &Session) -> Result<Url> {
 		let url = format!("https://www.hackerearth.com/submit/AJAX/");
         Ok(url.parse()?)
 	}

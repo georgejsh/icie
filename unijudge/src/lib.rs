@@ -234,9 +234,9 @@ pub fn fmt_title(val:i64)-> String{
 	}
 	let mut to_str:String="_".to_string();
 	let mut base=26;
-	while(num!=0){
+	while num!=0 {
 		let mut intVar:u8  = (97+num%base).try_into().unwrap();
-		let mut charVar:char;
+		let charVar:char;
 		
 		println!("{}-{}-{}",num,intVar,base);
 		

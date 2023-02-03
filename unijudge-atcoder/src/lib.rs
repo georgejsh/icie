@@ -2,12 +2,12 @@
 use async_trait::async_trait;
 use unijudge::{
     Problem,
-	chrono::{prelude::*,Duration,FixedOffset, TimeZone}, debris::{self, Context, Document, Find}, http::{Client, Cookie}, reqwest::{
+	chrono::{prelude::*,FixedOffset, TimeZone}, debris::{self, Context, Document, Find}, http::{Client, Cookie}, reqwest::{
 		header::{ORIGIN, REFERER}, StatusCode, Url
 	}, ContestDetails, ContestTime, Error, ErrorCode, Example, Language, RejectionCause, Resource, Result, Submission, TaskDetails, Verdict,json
 };
-use std::{future::Future, pin::Pin, sync::Mutex};
-use unijudge::serde::{Serialize,Deserialize, Deserializer};
+use std::{sync::Mutex};
+use unijudge::serde::{Serialize,Deserialize};
 #[derive(Debug)]
 pub struct AtCoder;
 
@@ -157,7 +157,7 @@ impl unijudge::Backend for AtCoder {
 		return Ok(result[0].to_string())
 	}
 
-    async fn problems_list(&self, session: &Self::Session, task: &Self::Task) -> Result<Vec<Problem>>{
+    async fn problems_list(&self, _session: &Self::Session, _task: &Self::Task) -> Result<Vec<Problem>>{
 		return Ok(Vec::new());
 	}
     

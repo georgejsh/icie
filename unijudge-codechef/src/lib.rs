@@ -1,17 +1,17 @@
 #![feature(try_blocks)]
 use markdown;
 use html_escape;
-use std::convert::TryInto;
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::{future::Future, pin::Pin, sync::Mutex};
 use unijudge::{
     Problem,
-	chrono::{prelude::*,Duration},
+	chrono::{prelude::*},
 	debris::{ Document, Find}, http::{Client, Cookie}, json, log::{debug, error}, reqwest::{ Url}, ContestDetails, ContestTime, ErrorCode, Language, RejectionCause, Resource, Result, Statement, Submission, TaskDetails, Verdict
 };
-use urlencoding::decode;
-use node_sys::console;
+
+
 use std::collections::HashMap;
 use linked_hash_map::LinkedHashMap;
 #[derive(Debug)]
@@ -328,7 +328,7 @@ impl unijudge::Backend for CodeChef {
 				//console::debug(&format!("Response {:?}",table_stat.find(".status-table")?.find("tbody")?.find_nth("tr",3)));
 				
 				
-				let vals:Vec<_> = table_stat.find(".status-table")?.find("tbody")?.find_all("tr").map(|row| {
+				let _vals:Vec<_> = table_stat.find(".status-table")?.find("tbody")?.find_all("tr").map(|row| {
 					//console::debug(&format!("R {:?}",row));
 					if row.find_nth("td",2).is_ok() {
 						//console::debug(&format!("RR {:?}",row));
@@ -517,9 +517,9 @@ impl unijudge::Backend for CodeChef {
         let rows_upcoming = resp.future_contests.iter().map(|row| (row, false));
         rows_upcoming
             .chain(rows_ongoing)
-            .filter(|(row, is_ongoing)| {
+            .filter(|(row, _is_ongoing)| {
                 match &row.contest_end_date_iso{
-                    Some(val)=> true,
+                    Some(_val)=> true,
                     _ => false
                 }
             })
@@ -623,7 +623,7 @@ async fn get_next_page_list(&self, session: &Session, task: &Task, page:u64,csrf
 			let mut prb_id = -1;
 			let mut tasks: Vec<_> = tasks
 				.into_iter().enumerate()
-				.map(|(i,kv)| {
+				.map(|(_i,kv)| {
 					
 					if kv.1.category_name=="unscored"{
 						(Task { contest: contest.clone(), task: kv.1.code , prefix:-1}, 1000000)
@@ -639,7 +639,7 @@ async fn get_next_page_list(&self, session: &Session, task: &Task, page:u64,csrf
 			// when contest begin, as all problems have a submit count of 0. But since this naive
 			// sort is as good as what you get with a browser, let's just ignore this.
 			tasks.sort_by_key(|task| u64::max_value() - task.1);
-			Ok(ContestDetailsEx { title: resp.name, tasks: tasks.into_iter().enumerate().map(|(i,mut kv)| {
+			Ok(ContestDetailsEx { title: resp.name, tasks: tasks.into_iter().enumerate().map(|(_i,mut kv)| {
                 if kv.0.prefix!=-1{
 					prb_id += 1; 
                     kv.0.prefix=prb_id;

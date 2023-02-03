@@ -5,22 +5,22 @@ use crate::{
 use futures::FutureExt;
 use evscode::{error::ResultExt, quick_pick, webview::WebviewMeta, QuickPick, E, R};
 
-use vscode_sys::{window,TreeItemCollapsibleState};
+use vscode_sys::{window};
 use futures::StreamExt;
 use serde::Serialize;
 use std::cmp::min;
 use crate::util::time_now;
 use unijudge::{Backend, Resource, Statement,
-	boxed::{BoxedContest, BoxedTask},ErrorCode
+	boxed::{BoxedContest, BoxedTask}
 };
-use wasm_bindgen::closure::Closure;
+
 use std::convert::TryInto;
-use once_cell::sync::Lazy;
+
 
 //use wasm_timer;
 //use wasm_timer::Instant;
 use core::time::Duration;
-use std::future::Future;
+
 pub async fn activate() -> R<()> {
 	let _status = crate::STATUS.push("Launching");
 	logger::initialize()?;
@@ -93,7 +93,7 @@ pub async fn layout_setup() -> R<()> {
 				});
 				
 			},
-			Err(err) =>{
+			Err(_err) =>{
                 //match err.0 {
                 //     ErrorCode::NotYetStarted =>  {statusBarItem.set_text("Contest Not Started");},
                      //ErrorCode::Ended_Already =>  {

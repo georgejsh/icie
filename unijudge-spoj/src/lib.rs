@@ -79,15 +79,15 @@ impl unijudge::Backend for SPOJ {
 		None
 	}
 
-	async fn rank_list(&self, session: &Self::Session, task: &Self::Task) -> Result<String>{
+	async fn rank_list(&self, _session: &Self::Session, _task: &Self::Task) -> Result<String>{
 		return Ok("NA".to_string());
 	}
 
-    async fn problems_list(&self, session: &Self::Session, task: &Self::Task) -> Result<Vec<Problem>>{
+    async fn problems_list(&self, _session: &Self::Session, _task: &Self::Task) -> Result<Vec<Problem>>{
 		return Ok(Vec::new());
 	}
 
-	async fn remain_time(&self, session: &Self::Session, task: &Self::Task) -> Result<i64>{
+	async fn remain_time(&self, _session: &Self::Session, _task: &Self::Task) -> Result<i64>{
 		return Err(ErrorCode::AlienInvasion.into());
 	}
 	

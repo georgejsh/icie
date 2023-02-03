@@ -1,22 +1,22 @@
 //! TreeDataProvider functions for TreeView
 
-use vscode_sys::{TreeItem, TreeItemCollapsibleState};
+use vscode_sys::{TreeItem};
 //use serde::{Serialize, Deserialize};
 use wasm_bindgen::{closure::Closure, JsValue};
-use std::ops::Deref;
-use once_cell::sync::Lazy;
-use crate::{BoxFuture,R,State};
+
+
+use crate::{BoxFuture,R};
 use js_sys;
 use std::future::Future;
-use core::time::Duration;
-use vscode_sys::{Event,EventEmitter,Thenable};
-use core::marker::PhantomData;
+
+use vscode_sys::{EventEmitter};
+
 use std::thread::LocalKey;
 /// TreeData functions for TreeView
 
 //pub type LazyFutureChildren = dyn (Fn(Option<TreeItem>) -> Future<Output=Vec<TreeItem>>) +Sync;
 //pub type LazyFutureChildren =   Box<(Fn(Option<TreeItem>) -> BoxFuture<'static,Option<Vec<TreeItem>>>) +Sync>;
-pub type LazyFutureChildren =   (Fn(Option<TreeItem>) -> BoxFuture<'static,Vec<TreeItem>>) +Sync;
+pub type LazyFutureChildren =   dyn (Fn(Option<TreeItem>) -> BoxFuture<'static,Vec<TreeItem>>) +Sync;
 //pub type LazyFutureChildren =   Fn(Option<TreeItem>) ->  Future<Output=Option<Vec<TreeItem>>> +Sync;
 
 /// TreeData functions for TreeView
@@ -24,9 +24,9 @@ pub type LazyFutureItem = dyn (Fn(TreeItem)->TreeItem)+Sync;
 /// TreeData functions for TreeView
 pub type LazyRefresh = dyn (Fn()->BoxFuture<'static,R<()>>)+Sync;
 /// TreeData functions for TreeView
-pub type Lazyisvisible =   (Fn() -> BoxFuture<'static,bool>) +Sync;
+pub type Lazyisvisible =   dyn (Fn() -> BoxFuture<'static,bool>) +Sync;
 /// TreeData functions for TreeView
-pub type Refreshevent = (Fn() ->LocalKey<EventEmitter>) +Sync;
+pub type Refreshevent = dyn (Fn() ->LocalKey<EventEmitter>) +Sync;
 
 
 //use serde_closure::desugar;
@@ -66,18 +66,18 @@ pub struct TreeData{
     pub getChildren:Closure<dyn FnMut()>,
   //  pub getTreeItem:JsValue,
 }*/
-use serde::ser::{Serialize,Serializer,SerializeStruct};
+
 extern crate wasm_bindgen;
-use lazy_static::lazy_static;
+
 use wasm_bindgen::JsCast;
 
 #[wasm_bindgen::prelude::wasm_bindgen]
 /// convert to jsvalue
-pub struct ClosureHandle(Closure<FnMut(JsValue)->Future<Output=JsValue>>);
-use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::JsFuture;
+pub struct ClosureHandle(Closure<dyn FnMut(JsValue)->dyn Future<Output=JsValue>>);
+
+
 use js_sys::Promise;
-use std::sync::Arc;
+
 /// convert to jsvalue
 /*const Treedata_event: evscode::State<String> =
 	evscode::State::new("icie.newsletter.lastAcknowledgedVersion", evscode::state::Scope::Global);*/
@@ -131,9 +131,9 @@ use std::sync::Arc;
                 
         }) as Box<dyn FnMut(JsValue)->Future<Output=JsValue>>);*/
         
-        let f1= Closure::<FnMut(JsValue)->Promise>::wrap(Box::new(move |elem:JsValue|{
+        let f1= Closure::<dyn FnMut(JsValue)->Promise>::wrap(Box::new(move |elem:JsValue|{
             let inp_data:Option<TreeItem>;
-            if(elem.is_null() || elem.is_undefined()){
+            if elem.is_null() || elem.is_undefined() {
                 inp_data=None;
             }else{
                 inp_data=Some(elem.into_serde().unwrap());
@@ -151,10 +151,10 @@ use std::sync::Arc;
                 
         }) as Box<dyn FnMut(JsValue)->Promise>);
         
-        let f2= Closure::<FnMut(JsValue)->JsValue>::wrap(Box::new(move |elem:JsValue|{
+        let f2= Closure::<dyn FnMut(JsValue)->JsValue>::wrap(Box::new(move |elem:JsValue|{
             let inp_data:TreeItem=elem.into_serde().unwrap();
             
-            let objar = js_sys::Array::new();
+            let _objar = js_sys::Array::new();
                 let ret=(treedataobj.getTreeItem)(inp_data);
                 //let objar = js_sys::Array::new();
                 JsValue::from_serde(&ret).unwrap()

@@ -1,16 +1,16 @@
 
 use evscode::TreeData;
-use vscode_sys::{TreeItem,TreeItemCollapsibleState,EventEmitter};
-use crate::submit::connect_to_workspace_task;
-use unijudge::{Backend, Resource, Statement,Problem,
-	boxed::{BoxedContest, BoxedTask},ErrorCode
+use vscode_sys::{TreeItem,EventEmitter};
+
+use unijudge::{Backend, Resource,Problem,
+	boxed::{BoxedContest, BoxedTask}
 };
-use core::time::Duration;
+
 use evscode::R;
 
 //use crate::util::sleep;
 use crate::{
-	assets, dir, logger, manifest::Manifest, net::{interpret_url, require_task,Session}, open, util::{self, fs, workspace_root,sleep,set_workspace_root}
+	manifest::Manifest, net::{interpret_url, require_task,Session}
 };
 async fn get_prob_list() -> R<Vec<Problem>>{
     let manifest=Manifest::load().await?;
@@ -26,7 +26,7 @@ async fn get_prob_list() -> R<Vec<Problem>>{
 async fn get_child(element:Option<TreeItem>) -> Vec<TreeItem> {
     let mut vec = Vec::new();
     match element{
-        Some(elem)=>{
+        Some(_elem)=>{
             //sleep(Duration::from_secs(1)).await;
             vec
         },
@@ -36,9 +36,9 @@ async fn get_child(element:Option<TreeItem>) -> Vec<TreeItem> {
                     vec.push(TreeItem{
                         label:format!("{:<25}-{:>5}",it.name,it.total_submissions),
                         collapse:0,
-                        icon: if(it.status ==0) 
+                        icon: if it.status ==0 
                             {evscode::get_path("assets/accept.png")}
-                        else if(it.status ==1)
+                        else if it.status ==1
                             {evscode::get_path("assets/reject.png")} 
                         else 
                             {evscode::get_path("assets/minus.png")} 
@@ -61,7 +61,7 @@ async fn get_child(element:Option<TreeItem>) -> Vec<TreeItem> {
     }
 }
 async fn isvisible() -> bool {
-    if let Ok(manifest) = Manifest::load().await {
+    if let Ok(_manifest) = Manifest::load().await {
         true
     }else {
         false

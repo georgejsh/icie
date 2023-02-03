@@ -1,5 +1,5 @@
 use crate::meta::{Activation, GalleryTheme, Package};
-use crate::extension_root;
+
 use serde::{Serialize, Serializer};
 use std::{
 	collections::{BTreeMap, HashMap}, fmt

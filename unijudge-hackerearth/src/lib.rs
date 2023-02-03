@@ -1,9 +1,9 @@
 #![feature(try_blocks)]
-use markdown;
+
 use html_escape;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::{future::Future, pin::Pin, sync::Mutex};
+use std::{sync::Mutex};
 use http::{
 	StatusCode
 };
@@ -11,7 +11,7 @@ use node_sys::console;
 use unijudge::{
     Problem,
 	chrono::{prelude::*,Duration},
-	debris::{ Document, Find, Context}, http::{Client, Cookie}, json, log::{debug, error}, reqwest::{ Url,header::{CONTENT_TYPE, REFERER}}, ContestDetails, ContestTime, ErrorCode, Language, RejectionCause, Resource, Result, Statement, Submission, TaskDetails, Verdict
+	debris::{ Document, Find}, http::{Client, Cookie}, json, log::{debug}, reqwest::{ Url,header::{CONTENT_TYPE, REFERER}}, ContestDetails, ContestTime, ErrorCode, Language, RejectionCause, Resource, Result, Statement, Submission, TaskDetails, Verdict
 };
 use unescape::unescape;
 #[derive(Debug)]
@@ -163,15 +163,15 @@ impl unijudge::Backend for HackerEarth {
 		Some(task.contest.clone())
 	}
 
-	async fn rank_list(&self, session: &Self::Session, task: &Self::Task) -> Result<String>{
+	async fn rank_list(&self, _session: &Self::Session, _task: &Self::Task) -> Result<String>{
 		return Ok("NA".to_string());
 	}
 	
-    async fn problems_list(&self, session: &Self::Session, task: &Self::Task) -> Result<Vec<Problem>>{
+    async fn problems_list(&self, _session: &Self::Session, _task: &Self::Task) -> Result<Vec<Problem>>{
 		return Ok(Vec::new());
 	}
 
-	async fn remain_time(&self, session: &Self::Session, task: &Self::Task) -> Result<i64>{
+	async fn remain_time(&self, _session: &Self::Session, _task: &Self::Task) -> Result<i64>{
 		return Err(ErrorCode::AlienInvasion.into());
 	}
 
@@ -367,7 +367,7 @@ impl unijudge::Backend for HackerEarth {
 	}
 	
 
-	async fn task_languages(&self, session: &Self::Session, task: &Self::Task) -> Result<Vec<Language>> {
+	async fn task_languages(&self, _session: &Self::Session, _task: &Self::Task) -> Result<Vec<Language>> {
 		Ok(vec![ Language { id: "CPP17".to_owned(), name: "C++17".to_owned()}])
 	}
 
@@ -528,7 +528,7 @@ impl unijudge::Backend for HackerEarth {
 		Ok((resp.submission_id.to_string()).to_owned())
 	}
 
-	fn submission_url(&self, _session: &Self::Session, _task: &Self::Task, id: &str) -> String {
+	fn submission_url(&self, _session: &Self::Session, _task: &Self::Task, _id: &str) -> String {
 		format!("https://www.hackerearth.com/submit/AJAX/")
 	}
 
@@ -547,13 +547,13 @@ impl unijudge::Backend for HackerEarth {
 	fn contest_url(&self, contest: &Self::Contest) -> String {
 		match contest {
 			Contest::Normal(contest) => format!("https://www.hackerearth.com/challenges/competitive/{}", contest),
-			Contest::Practice(main,sub,topic) => "https://www.codechef.com/problems/school".to_owned(),
+			Contest::Practice(_main,_sub,_topic) => "https://www.codechef.com/problems/school".to_owned(),
 		}
 	}
 	fn task_url(&self, _session: &Self::Session, task: &Self::Task) -> Result<String> {
 		Ok(format!("https://www.hackerearth.com/{}/algorithm/{}", task.contest.prefix(), task.task))
 	}
-	async fn contest_title(&self, session: &Self::Session, contest: &Self::Contest) -> Result<String> {
+	async fn contest_title(&self, _session: &Self::Session, contest: &Self::Contest) -> Result<String> {
 		Ok(self.contest_id(contest))
 	}
 
@@ -640,7 +640,7 @@ impl HackerEarth {
 			// sort is as good as what you get with a browser, let's just ignore this.
 			//tasks.sort_unstable_by_key(|task| u64::max_value() - task.1);
 			//Ok(ContestDetailsEx { title: "Title ".to_owned(), tasks: taks })
-			let resp=session.client.get(format!("https://www.hackerearth.com/challenges/competitive/{}/problems/",contest.as_virt_symbol()).parse()?).send().await?.text().await?;
+			let _resp=session.client.get(format!("https://www.hackerearth.com/challenges/competitive/{}/problems/",contest.as_virt_symbol()).parse()?).send().await?.text().await?;
 			let doc = Document::new(
 				&session.client.get(format!("https://www.hackerearth.com/challenges/competitive/{}/problems/",contest.as_virt_symbol()).parse()?).send().await?.text().await?,
 				//&session.client.get("https://www.hackerearth.com/challenges/hackathon/".parse()?).send().await?.text().await?,
@@ -703,7 +703,7 @@ impl HackerEarth {
 	/// problem from a different division. This function performs an additional HTTP request to take
 	/// this into account.
     
-	async fn active_submit_url(&self, task: &Task, session: &Session) -> Result<Url> {
+	async fn active_submit_url(&self, _task: &Task, _session: &Session) -> Result<Url> {
 		let url = format!("https://www.hackerearth.com/submit/AJAX/");
         Ok(url.parse()?)
 	}

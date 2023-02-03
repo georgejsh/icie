@@ -1,4 +1,4 @@
-use crate::util::{expand_path, fs, workspace_root};
+use crate::util::{expand_path, fs};
 use evscode::{
 	marshal::{type_error2, Marshal}, Configurable, R
 };

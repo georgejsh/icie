@@ -1,4 +1,4 @@
-use crate::util::OS;
+
 use evscode::webview::WebviewRef;
 pub fn html_js_dynamic(webview:WebviewRef,source: &str) -> String {
     let path=webview.as_webview_uri(&evscode::asset(&("assets/".to_owned()+source)));
@@ -10,7 +10,7 @@ pub fn html_css_dynamic(source: &str) -> String {
 }
 
 pub fn html_material_icons(webview:WebviewRef) -> String {
-	let mut woff2_asset = webview.as_webview_uri(&evscode::asset("assets/material-icons.woff2"));
+	let woff2_asset = webview.as_webview_uri(&evscode::asset("assets/material-icons.woff2"));
 	/*if let Ok(OS::Windows) = OS::query() {
 		woff2_asset = evscode::asset("assets/material-icons.woff2");
 		//woff2_asset = woff2_asset.replace('\\', "\\\\");

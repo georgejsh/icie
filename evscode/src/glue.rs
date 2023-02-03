@@ -4,10 +4,10 @@ use crate::{
 use once_cell::sync::OnceCell;
 use std::{cell::RefCell, panic::PanicInfo};
 use wasm_bindgen::{closure::Closure, JsValue};
-use log::info;
-use node_sys::console;
+
+
 mod package_json;
-use serde_wasm_bindgen;
+
 //use gloo_utils::format::JsValueSerdeExt;
 use crate::treedata::to_JsValue;
 #[doc(hidden)]

@@ -245,7 +245,7 @@ pub fn listener() -> () {
 	}*/
 	let buf = evscode::workspace_root().map_err(suggest_open)?;
 	unsafe{
-		if(*is_contest.get_mut()==true){
+		if *is_contest.get_mut()==true {
 			//console::log(console::Level::Info ,"Enter contest" );
 			//console::log(console::Level::Info ,&buf );
 			/*let res=evscode::active_editor_file().await;

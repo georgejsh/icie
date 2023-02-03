@@ -6,13 +6,13 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use unijudge::{
     Problem,
-	chrono::{prelude::*,Duration,FixedOffset, TimeZone}, debris::{Context, Document, Find}, http::{Client, Cookie}, reqwest::{
+	chrono::{prelude::*, TimeZone}, debris::{Context, Document, Find}, http::{Client, Cookie}, reqwest::{
 		self, header::{ORIGIN, REFERER}, Url
 	}, json,Backend, ContestDetails, ContestTime, Error, ErrorCode, Example, Language, Resource, Result, Statement, Submission, TaskDetails
 };
 //use openssl::symm::*;
 use cookie::Cookie as OtherCookie;
-use hex::encode;
+
 use hex::FromHex;
 use aes::cipher::{block_padding::*, BlockDecryptMut, KeyIvInit,generic_array::GenericArray};
 
@@ -21,7 +21,7 @@ use aes::cipher::{block_padding::*, BlockDecryptMut, KeyIvInit,generic_array::Ge
  type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
 //use crypto::{ aes::{cbc_decryptor,KeySize} , blockmodes::NoPadding, buffer::{RefReadBuffer,RefWriteBuffer} };
 
-use node_sys::console;
+
 #[derive(Debug)]
 pub struct Codeforces;
 
@@ -206,10 +206,10 @@ impl unijudge::Backend for Codeforces {
 		match &task.contest.source {
 			Source::Gym =>return Ok("Gym has no ranklist".to_string()),
 			Source::Problemset => return Ok("Problemset has no ranklist".to_string()),
-			Source::Group { group } => return Ok("Group has no ranklist".to_string()),
+			Source::Group { group: _ } => return Ok("Group has no ranklist".to_string()),
 			Source::Contest =>{
 				let csrf = self.fetch_csrf(session).await?;
-				let resp = session
+				let _resp = session
 					.client
 					.post(format!("https://codeforces.com/contest/{}/standings/friends/true",task.contest.id).parse()?)
 					.form(&[
@@ -606,7 +606,7 @@ impl Codeforces {
 					const IV:  [u8;16] = [24,143,175,219,224,248,126,240,252,40,16,213,179,227,71,5];
 					let key = GenericArray::from(KEY);
 					let iv = GenericArray::from(IV);
-					let ct = Aes128CbcDec::new(&key.into(), &iv.into())
+					let _ct = Aes128CbcDec::new(&key.into(), &iv.into())
 					.decrypt_padded_mut::<NoPadding>(&mut buffer)
 					.unwrap();
 					//console::debug(&format!("RCPC {:?}",hex::encode(buffer)));
