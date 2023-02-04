@@ -42,19 +42,24 @@ action_edit = make_action(ev => {
 
 function new_start() {
 	console.log(`new_start()`);
+    vscode.postMessage({ tag: 'start_running'});
 	if (!newing) {
 		document.getElementsByClassName('new')[0].classList.add("is-active");
+        document.getElementById("new-input-fixed").innerText="";
 		newing = true;
 	}
 	for (let to_hide of document.getElementsByClassName('new-tutorial-start')) {
 		to_hide.style.display = 'none';
 	}
 	document.getElementById('new-input').focus();
+    document.getElementById('new_button').style.visibility = 'hidden';
+    document.getElementById("new-error").disabled=true;
+    document.getElementById('new-input').style.visibility = 'visible';
 }
 
 function new_confirm() {
 	console.log(`new_confirm()`);
-	let input = document.getElementById('new-input').value;
+	let input = document.getElementById("new-input-fixed").innerText+document.getElementById('new-input').value;
 	let desired = document.getElementById('new-desired').value;
 	vscode.postMessage({
 		tag: "new_test",
@@ -72,7 +77,13 @@ function new_shutdown() {
 	document.getElementsByClassName('new')[0].classList.remove('is-active');
 	document.getElementById('new-input').value = '';
 	document.getElementById('new-desired').value = '';
+    document.getElementById('new-error').value = '';
+    document.getElementById('new-input-fixed').value = '';
+    document.getElementById('message').innerText = '';
+    document.getElementById("new-input").disabled=false;
 	newing = false;
+    document.getElementById('new_button').style.visibility = 'visible';
+    document.getElementById('new_button').classList.remove('is-active');
 }
 
 function scroll_to_wa() {
@@ -99,7 +110,15 @@ window.addEventListener('message', event => {
 		scroll_to_wa();
 	} else if (message.tag === 'eval_resp') {
 		eval_finish(message);
+	} else if (message.tag === 'output') {
+		append_output(message);
 	}
+    else if (message.tag === 'error') {
+		append_error(message);
+	}
+    else if (message.tag=== 'run_done'){
+        process_exit(message)
+    }
 });
 
 window.addEventListener('load', () => {
@@ -111,6 +130,7 @@ window.addEventListener('load', () => {
 		let desired = class_kid(row, ['desired', 'data']);
 		sync_scroll(output, desired);
 	}
+    
 }, false);
 
 let cursor_x = 0;
@@ -148,6 +168,7 @@ window.onload = () => {
 	vscode.postMessage({
 		tag: "after_load"
 	});
+    document.getElementById("new-input").addEventListener("keypress", onTestChange)
 };
 
 function eval_finish(msg) {
@@ -161,8 +182,15 @@ function autoexpand_textarea(tx) {
 	tx.setAttribute('style', `height: ${Math.max(86, tx.scrollHeight)}px; overflow-y: hidden;`);
 	tx.addEventListener('input', function () {
 		this.style.height = 'auto';
+        this.style.overflowY = 'hidden'
 		this.style.height = `${Math.max(86, this.scrollHeight)}px`;
 	}, false);
+    tx.addEventListener('update', function () {
+		this.style.height = 'auto';
+        this.style.overflowY = 'hidden';
+		this.style.height = `${Math.max(86, this.scrollHeight)}px`;
+	}, false);
+    
 }
 
 function sync_scroll(a, b) {
@@ -194,3 +222,40 @@ function class_kid(v, clss) {
 	}
 	return v;
 }
+
+function onTestChange(event) {
+    var keyCode = event.hasOwnProperty('which') ? event.which : event.keyCode;
+
+    // If the user has pressed enter
+    if (keyCode === 13) {
+        document.getElementById("new-input-fixed").innerText+=document.getElementById("new-input").value+"\n";
+        var lines=document.getElementById("new-input").value;
+        vscode.postMessage({ tag: "input_data", data: lines+"\n" });
+        console.log("input " +lines);
+        document.getElementById("new-input").value="";
+        event.preventDefault();
+        return false;
+    }
+    return true;
+}
+
+function append_output(msg) {
+	let new_input = document.getElementById('new-desired');
+	new_input.value+=msg.input
+}
+
+function append_error(msg) {
+	let new_input = document.getElementById('new-error');
+	new_input.value+=msg.input
+}
+
+function process_exit(msg) {
+    if(!newing) return;
+	let new_input = document.getElementById('message');
+	new_input.innerText="Process exited with exit code:"+msg.input;
+    document.getElementById("new-input").value="";
+    document.getElementById("new-input").disabled=true;
+    document.getElementById('new-input').style.visibility = 'hidden';
+    document.getElementById('new-input').classList.remove('is-active');
+}
+

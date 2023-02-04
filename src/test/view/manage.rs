@@ -1,18 +1,30 @@
 use crate::{
-	compile::{compile, Codegen}, debug::{gdb, rr}, dir, executable::Environment, test::{
+	compile::{compile, Codegen}, debug::{gdb, rr}, dir, executable::{Environment,capture_node_stream_receiver}, test::{
 		add_test, run, time_limit, view::{render::render, SCROLL_TO_FIRST_FAILED, SKILL_ACTIONS, SKILL_ADD}, TestRun
-	}, util::{self, fs, path::Path, SourceTarget}
+	}, util::{self, fs, path::Path, sleep, SourceTarget}
 };
+use std::time::Duration;
 use async_trait::async_trait;
 use evscode::{
 	error::cancel_on, goodies::webview_collection::{Behaviour, Collection}, stdlib::webview::{Disposer, Listener}, webview::{WebviewMeta, WebviewRef}, Webview, E, R
 };
+use log::debug;
+use wasm_bindgen::{JsCast,JsValue};
+use node_sys::stream::Writable;
+use node_sys::stream::Readable;
 use futures::StreamExt;
+use futures::{
+	channel::{mpsc, oneshot}, Stream
+};
+use wasm_bindgen::closure::Closure;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-
+use std::sync::{Arc, Mutex};
 pub static COLLECTION: Lazy<Collection<TestView>> = Lazy::new(|| Collection::new(TestView));
-
+pub struct RunStream{
+    data:String,
+    types:String,
+}
 pub struct TestView;
 
 #[async_trait(?Send)]
@@ -37,6 +49,8 @@ impl Behaviour for TestView {
 	}
 
 	async fn manage(&self, source: Self::K, webview: WebviewRef, listener: Listener, disposer: Disposer) -> R<()> {
+        let mut recver :Arc<Mutex<Option<Writable>>>=Arc::new(Mutex::new(None));
+        let mut kidv :Arc<Mutex<Option<node_sys::child_process::ChildProcess>>>=Arc::new(Mutex::new(None));
 		let mut stream = cancel_on(listener, disposer);
 		while let Some(note) = stream.next().await {
 			let note: Note = note?.into_serde().unwrap();
@@ -49,12 +63,16 @@ impl Behaviour for TestView {
 					let source = source.clone();
 					evscode::spawn(async move { gdb(&in_path, source).await });
 				},
-				Note::NewTest { input, desired } => evscode::spawn(async move {
+				Note::NewTest { input, desired } => {
+                    if let Some(child) = &*kidv.lock().unwrap() {  
+					    child.kill(9);
+                    }
+                    evscode::spawn(async move {
 					if !input.is_empty() && !desired.is_empty() {
 						SKILL_ADD.add_use().await;
 					}
 					add_test(&input, &desired).await
-				}),
+				})},
 				Note::SetAlt { in_path, out } => evscode::spawn(async move {
 					let in_alt_path = in_path.with_extension("alt.out");
 					fs::write(&in_alt_path, out).await?;
@@ -78,6 +96,93 @@ impl Behaviour for TestView {
 					if SCROLL_TO_FIRST_FAILED.get() {
 							let _ = webview.post_message(Food::ScrollToWA).await;
 					}
+				},
+                Note::InputData{data} => {
+                    //Err(E::error("here"));
+                    //let _status = crate::STATUS.push("Reached Input data");
+                    debug!("input data came");
+                    let input_buffer = node_sys::buffer::Buffer::from(js_sys::Uint8Array::from(data.as_bytes()));
+                    if let Some(recv) = &*recver.lock().unwrap() {  
+					    recv.write(&input_buffer, (), Closure::once_into_js(|| {}));
+                    }
+                    //drop(_status);
+				},
+                Note::SpawnRun => {
+                    let recver2 = Arc::clone(&recver);
+                    let kidv2 = Arc::clone(&kidv);
+					let webview = webview.clone();
+					evscode::spawn(async move {
+                        //let _status = crate::STATUS.push("Running Code");
+                        let brute_force = compile(&SourceTarget::Main, Codegen::Debug, false).await?;
+                        let environment = Environment { time_limit: None, cwd: None };
+                        let mut run_spawn = brute_force.run_start(&environment).await?;
+                        *recver2.lock().unwrap() = Some(run_spawn.input);
+                        *kidv2.lock().unwrap() = Some(run_spawn.kid.clone().into());
+                        //webview.post_message(Food::OutputData
+                        //    {input:"Test".to_string()}).await;
+                        /*let mut rx=capture_node_stream_receiver(run_spawn.stdout).await;
+                        while let None = run_spawn.kid.exit_code() {
+                            while let Some(Some(chunk)) = rx.next().await {
+                                webview.post_message(Food::OutputData
+                                    {input:String::from_utf8_lossy(&chunk).into_owned()}).await;
+                            }
+                            sleep(Duration::from_secs(1)).await;
+                            
+                        }*/
+                        let (tx, mut rx) = mpsc::unbounded();
+                        let tx2 = tx.clone();
+                        let tx3 = tx.clone();
+                        let end_handler = Closure::wrap(Box::new(move |_| {
+                            let _ = tx2.unbounded_send(None);
+                        }) as Box<dyn FnMut(JsValue)>);
+                        run_spawn.stdout.on_0("end", &end_handler);
+                        let readable2 = run_spawn.stdout.clone().dyn_into::<node_sys::stream::Readable>().unwrap();
+                        let readable_handler = Closure::wrap(Box::new(move |data:JsValue| {
+                            
+                            while let Some(raw_buf) = readable2.read() {
+                                let js_buf = js_sys::Uint8Array::new(&raw_buf.buffer());
+                                let mut rust_buf = vec![0u8; js_buf.length() as usize];
+                                js_buf.copy_to(&mut rust_buf);
+                                let _ = tx.unbounded_send(Some(RunStream{data:String::from_utf8_lossy(&rust_buf).into_owned(),types:"out".to_string()}));
+                            }
+                            /*let array = js_sys::Uint8Array::new(&data);
+                            let _ = tx.unbounded_send(Some(array.to_vec()));*/
+                        }) as Box<dyn FnMut(JsValue)>);
+                        run_spawn.stdout.on_0("readable", &readable_handler);
+                        let readable3:Readable = run_spawn.stderr.clone().into();
+                        let readable_handler2 = Closure::wrap(Box::new(move |data:JsValue| {
+                            while let Some(raw_buf) = readable3.read() {
+                                let js_buf = js_sys::Uint8Array::new(&raw_buf.buffer());
+                                let mut rust_buf = vec![0u8; js_buf.length() as usize];
+                                js_buf.copy_to(&mut rust_buf);
+                                let _ = tx3.unbounded_send(Some(RunStream{data:String::from_utf8_lossy(&rust_buf).into_owned(),types:"err".to_string()}));
+                            }
+                            /*let array = js_sys::Uint8Array::new(&data);
+                            let _ = tx.unbounded_send(Some(array.to_vec()));*/
+                        }) as Box<dyn FnMut(JsValue)>);
+                        run_spawn.stderr.on_0("readable", &readable_handler2);
+
+                        while let Some(Some(chunk)) = rx.next().await {
+                            if chunk.types=="out"{
+                                webview.post_message(Food::OutputData
+                                    {input:chunk.data}).await;
+                            }else {
+                                webview.post_message(Food::ErrorData
+                                    {input:chunk.data}).await; 
+                            }
+                        }
+                        
+                    
+                        *recver2.lock().unwrap() = None;
+                        *kidv2.lock().unwrap() = None;
+                        let excode=run_spawn.kid.exit_code().unwrap();
+                        //drop(_status);
+                        //Err(E::error(format!("exit code {:?}",extcode)))
+                        webview.post_message(Food::ProcessEnd{input:excode}
+                        ).await;
+                        Ok(())
+                        
+                    });
 				},
 				Note::EvalReq { id, input } => {
 					if let Ok(brute_force) = dir::brute_force() {
@@ -126,7 +231,11 @@ enum Note {
 	#[serde(rename = "eval_req")]
 	EvalReq { id: i64, input: String },
 	#[serde(rename = "after_load")]
-	AfterLoad
+	AfterLoad,
+    #[serde(rename = "start_running")]
+    SpawnRun,
+    #[serde(rename = "input_data")]
+    InputData{ data: String }
 }
 
 #[derive(Serialize)]
@@ -138,4 +247,10 @@ pub enum Food {
 	EvalResp { id: i64, input: String },
 	#[serde(rename = "new_start")]
 	NewStart,
+    #[serde(rename = "output")]
+    OutputData {input:String},
+    #[serde(rename = "error")]
+    ErrorData {input:String},
+    #[serde(rename = "run_done")]
+	ProcessEnd {input:i32},
 }

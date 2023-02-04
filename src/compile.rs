@@ -133,6 +133,7 @@ pub async fn compile(source: &SourceTarget, codegen: Codegen, force: bool) -> R<
 	display_compiler_stderr(&status.run.stderr);
 	check_compiler_errors(&status).await?;
 	COMPILER_INSTALL_CONFIRMED.set(&true).await;
+    drop(_status);
 	Ok(status.executable)
 }
 

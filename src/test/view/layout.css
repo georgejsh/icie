@@ -60,7 +60,9 @@ body {
 .new.is-active {
 	display: unset;
 }
-
+.button {
+    padding: 10px 20px;
+  }
 .new-areas {
 	display: flex;
 	padding: calc(var(--margin-new) / 2);

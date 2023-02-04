@@ -63,7 +63,12 @@ pub mod child_process {
 		#[wasm_bindgen(method, getter)]
 		pub fn stderr(this: &ChildProcess) -> Option<Readable>;
 
+        #[wasm_bindgen(method, getter, js_name=exitCode)]
+		pub fn exit_code(this: &ChildProcess) -> Option<i32>;
+
 		pub fn spawn(command: &str, args: js_sys::Array, options: Options) -> ChildProcess;
+
+        //pub fn exec(command: &str, args: js_sys::Array, options: Options) -> ChildProcess;
 
 	}
 
@@ -88,6 +93,7 @@ pub mod child_process {
 		Pipe,
 		Ignore,
 		Inherit,
+        Overlapped,
 	}
 	impl Serialize for Stdio {
 		fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> where {
@@ -95,6 +101,7 @@ pub mod child_process {
 				Stdio::Pipe => "pipe",
 				Stdio::Ignore => "ignore",
 				Stdio::Inherit => "inherit",
+                Stdio::Overlapped => "overlapped",
 			})
 		}
 	}
@@ -284,15 +291,21 @@ pub mod stream {
 		pub type Readable;
 
 		#[wasm_bindgen(method, js_name = on)]
-		pub fn on_0(this: &Readable, event: &str, callback: &Closure<dyn FnMut()>);
+		pub fn on_0(this: &Readable, event: &str, callback: &Closure<dyn FnMut(JsValue)>);
 
 		#[wasm_bindgen(method)]
 		pub fn read(this: &Readable) -> Option<Buffer>;
+
+        #[wasm_bindgen(method,getter, js_name = closed)]
+		pub fn is_closed(this: &Readable) -> bool;
 
 		pub type Writable;
 
 		#[wasm_bindgen(method, catch)]
 		pub fn end(this: &Writable, chunk: &Buffer, encoding: (), callback: JsValue) -> Result<(), JsValue>;
+
+        #[wasm_bindgen(method, catch)]
+		pub fn write(this: &Writable, chunk: &Buffer, encoding: (), callback: JsValue) -> Result<(), JsValue>;
 
 	}
 }

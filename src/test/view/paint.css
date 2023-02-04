@@ -86,3 +86,7 @@ body {
 	font-size: inherit;
 	background: var(--col2-normal);
 }
+
+#save_button {background-color: green;} 
+#cancel_button {background-color: red;} 
+#new_button {background-color: blue;} 

@@ -4,6 +4,7 @@ use futures::{
 	channel::{mpsc, oneshot}, future::join3, FutureExt, StreamExt
 };
 use node_sys::child_process::Stdio;
+use node_sys::stream::{Writable,Readable};
 use std::{
 	future::Future, sync::atomic::{AtomicBool, Ordering::SeqCst}, time::Duration
 };
@@ -29,6 +30,12 @@ impl Run {
 	}
 }
 
+pub struct Running {
+	pub input: Writable,
+    pub stdout: Readable,
+    pub stderr: Readable,
+    pub kid:node_sys::child_process::ChildProcess,
+}
 #[derive(Debug)]
 pub struct Environment {
 	pub time_limit: Option<Duration>,
@@ -101,8 +108,76 @@ impl Executable {
 		let stderr = String::from_utf8_lossy(&stderr).into_owned();
 		Ok(Run { stdout, stderr, exit_code, exit_kind, time: t2 - t1 })
 	}
+
+    pub async fn run_start(&self, environment: &Environment) -> R<Running> {
+		let js_args = js_sys::Array::new();
+        js_args.push(&JsValue::from_str("-i0"));
+        js_args.push(&JsValue::from_str("-o0"));
+        js_args.push(&JsValue::from_str("-e0"));
+        js_args.push(&JsValue::from_str(&self.command));
+        
+		let cwd = environment.cwd.clone().or_else(|| workspace_root().ok());
+		let kid = node_sys::child_process::spawn("stdbuf", js_args, node_sys::child_process::Options {
+			cwd: cwd.as_ref().map(Path::as_str),
+			env: None,
+			argv0: None,
+			stdio: Some([Stdio::Overlapped, Stdio::Overlapped, Stdio::Overlapped]),
+			uid: None,
+			gid: None,
+			shell: None,
+			windows_verbatim_arguments: None,
+			windows_hide: None,
+		});
+		let t1 = node_hrtime();
+		// This is not the proper way to check whether an error has happened, but doing otherwise
+		// would be ugly. Blame Node for not making a proper asynchronous spawn or throwing an
+		// exception.
+		if kid.stdin().is_none() {
+			let (tx, rx) = oneshot::channel();
+			kid.on_2("error", &Closure::once_into_js(|err: js_sys::Error| tx.send(err).unwrap()));
+			return Err(E::from(rx.await.unwrap()).context("running solution executable failed"));
+		}
+        // exception.
+		if kid.stdout().unwrap().is_closed() {
+			return Err(E::error("stdout stream closed"))
+		}
+		// Ignore the error returned from stdin. This can happen when the app exits before any input can be written,
+		// which I guess can happen with empty programs, especially in debug mode.
+		Ok(Running {input:kid.stdin().unwrap(),stdout:kid.stdout().unwrap(),stderr:kid.stderr().unwrap(),kid:kid})
+	}
 }
 
+
+pub async  fn capture_node_stream_receiver(readable: node_sys::stream::Readable) -> mpsc::UnboundedReceiver<std::option::Option<Vec<u8>>>{
+	let (tx, rx) = mpsc::unbounded();
+	let tx2 = tx.clone();
+	let end_handler = Closure::wrap(Box::new(move |_| {
+		let _ = tx2.unbounded_send(None);
+	}) as Box<dyn FnMut(JsValue)>);
+	readable.on_0("end", &end_handler);
+	let readable2 = readable.clone().dyn_into::<node_sys::stream::Readable>().unwrap();
+	let readable_handler = Closure::wrap(Box::new(move |_| {
+		while let Some(raw_buf) = readable.read() {
+			let js_buf = js_sys::Uint8Array::new(&raw_buf.buffer());
+			let mut rust_buf = vec![0u8; js_buf.length() as usize];
+			js_buf.copy_to(&mut rust_buf);
+			let _ = tx.unbounded_send(Some(rust_buf));
+		}
+	}) as Box<dyn FnMut(JsValue)>);
+	readable2.on_0("readable", &readable_handler);
+	rx
+}
+async fn wait_process_receiver(kid: &node_sys::child_process::ChildProcess) -> oneshot::Receiver<Option<i32>> {
+	let (tx, rx) = oneshot::channel();
+	let mut tx = Some(tx);
+	kid.on_2(
+		"exit",
+		&Closure::once_into_js(move |code: JsValue, _signal: JsValue| {
+			tx.take().unwrap().send(code.as_f64().map(|code| code as i32)).unwrap()
+		}),
+	);
+	rx
+}
 async fn wait_process(kid: &node_sys::child_process::ChildProcess) -> Option<i32> {
 	let (tx, rx) = oneshot::channel();
 	let mut tx = Some(tx);
@@ -118,19 +193,19 @@ async fn wait_process(kid: &node_sys::child_process::ChildProcess) -> Option<i32
 async fn capture_node_stream(readable: node_sys::stream::Readable) -> Vec<u8> {
 	let (tx, mut rx) = mpsc::unbounded();
 	let tx2 = tx.clone();
-	let end_handler = Closure::wrap(Box::new(move || {
+	let end_handler = Closure::wrap(Box::new(move |_| {
 		let _ = tx2.unbounded_send(None);
-	}) as Box<dyn FnMut()>);
+	}) as Box<dyn FnMut(JsValue)>);
 	readable.on_0("end", &end_handler);
 	let readable2 = readable.clone().dyn_into::<node_sys::stream::Readable>().unwrap();
-	let readable_handler = Closure::wrap(Box::new(move || {
+	let readable_handler = Closure::wrap(Box::new(move |_| {
 		while let Some(raw_buf) = readable.read() {
 			let js_buf = js_sys::Uint8Array::new(&raw_buf.buffer());
 			let mut rust_buf = vec![0u8; js_buf.length() as usize];
 			js_buf.copy_to(&mut rust_buf);
 			let _ = tx.unbounded_send(Some(rust_buf));
 		}
-	}) as Box<dyn FnMut()>);
+	}) as Box<dyn FnMut(JsValue)>);
 	readable2.on_0("readable", &readable_handler);
 	let mut buf = Vec::new();
 	while let Some(Some(chunk)) = rx.next().await {

@@ -71,6 +71,7 @@ pub async fn render(tests: &[TestRun],webview:WebviewRef) -> R<String> {
 				<table class="table">
 					{table}
 				</table>
+                <button class="button" type="button" id="new_button" onclick="new_start()" style="float: right;">New</button>
 				{new_test}
 			</body>
 		</html>
@@ -254,38 +255,40 @@ fn render_action(action: &Action) -> String {
 }
 
 async fn render_new_test() -> String {
-	let first = if !SKILL_ADD.is_proficient().await {
-		"<p class=\"new-tutorial new-tutorial-start\">Press <kbd>Alt</kbd><kbd>-</kbd> to add a new test.</p>"
-	} else {
-		""
-	};
-	let instruction = if !SKILL_ADD.is_proficient().await {
-		"<p class=\"new-tutorial\">... and press <kbd>Alt</kbd><kbd>-</kbd> to finish adding the test.</p>"
-	} else {
-		""
-	};
+
+	
 	format!(
 		r#"
-		{first}
 		<div class="new">
-			<div class="new-areas">
-				{input_area}
-				{output_area}
-			</div>
-			{instruction}
+            <div class="new-areas">
+                <div class="new-area">Input:<br/>
+                <div id="new-input-fixed"></div>
+                    {input_area}
+                </div>
+                <div class="new-area">Output:
+                    {output_area}
+                </div>
+                <div class="new-area">Std Error:
+                    {error_area}
+                </div>
+            </div>
+            <div id="message"></div>
+            <button class="button" type="button" id="save_button"  onclick="new_confirm()" style="float: right;">Save</button>
+            <button class="button" type="button" id="cancel_button" onclick="new_shutdown()" style="float: right;"">Cancel</button>
+            
 		</div>
-"#,
-		first = first,
+        "#,
 		input_area = render_new_test_area("new-input", "Write test input here...").await,
-		output_area = render_new_test_area("new-desired", "Write test output here...").await,
-		instruction = instruction,
+		output_area = render_new_test_area("new-desired", "Display test output here...").await,
+        error_area = render_new_test_area("new-error", "Display test error here...").await,
 	)
 }
 
 async fn render_new_test_area(id: &str, hint: &str) -> String {
 	let placeholder =
 		if !SKILL_ADD.is_proficient().await { format!("placeholder=\"{}\"", hint) } else { String::new() };
-	format!("<textarea id=\"{}\" class=\"new-area\" {}></textarea>", id, placeholder)
+        format!("<textarea id=\"{}\" class=\"new-area\" {}></textarea>", id, placeholder)
+    
 }
 
 impl HideBehaviour {
