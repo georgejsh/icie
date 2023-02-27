@@ -710,13 +710,15 @@ async fn get_next_page_list(&self, session: &Session, task: &Task, page:u64,csrf
 <html>
 	<head>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/3.0.1/github-markdown.min.css">
-		<script type="text/x-mathjax-config">
-			MathJax.Hub.Config({{
-				TeX: {{extensions: ['color.js'] }},tex2jax: {{inlineMath: [['$','$']],
-                }}
-			}});
-		</script>
-		<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js?config=TeX-AMS-MML_HTMLorMML' async></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css" >
+        <script type="module">
+            import renderMathInElement from "https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.mjs"; 
+            renderMathInElement(document.body,{{
+                delimiters:[
+                    {{left: "$", right: "$", display: false}}
+                    ]
+                }});
+        </script>
 		<style>
 			.markdown-body {{
 				background-color: white;
