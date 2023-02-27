@@ -181,7 +181,7 @@ impl unijudge::Backend for HackerEarth {
 			let url: Url =
 			self.task_url(session,task)?
 				.parse()?;
-			console::debug(&format!("Task url:{}",self.task_url(session,task)?));
+			//console::debug(&format!("Task url:{}",self.task_url(session,task)?));
 			let resp = Document::new(&session.client.get(url.clone()).send().await?.text().await?);
 			//console::debug(&format!("Task output:{}",resp.find("body")?.text().string()));
 			

@@ -1,7 +1,7 @@
 #![feature(try_blocks)]
 use markdown;
 use html_escape;
-
+//use node_sys::console;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::{future::Future, pin::Pin, sync::Mutex};
@@ -293,8 +293,15 @@ impl unijudge::Backend for CodeChef {
 		// sites and would require refactoring unijudge. However, using it would possible make
 		// things faster and also get rid of the insanity that is querying all these submission
 		// lists.
+        let submiturl= self.active_submissions_url(task, session).await?;
+        let doc = session.client.get(submiturl.clone()).send().await?.text().await?;
+        let re= regex::Regex::new("window.csrfToken = \"([_0-9A-Za-z-]+)\"").unwrap();
+        let cap =re.captures(&doc).unwrap();
+        let csrf_tok=cap.get(1).unwrap().as_str();
 		let url = self.active_submission_url(task, session).await?;
-		let doc = Document::new(&session.client.get(url).send().await?.text().await?);
+        let resp= session.client.get(url).header("x-csrf-token",csrf_tok)
+        .send().await?.text().await?;
+		/*let doc = Document::new(&session.client.get(url).send().await?.text().await?);
 		if doc.find("#recaptcha-content").is_ok() {
 			// This could possibly also happen in the other endpoints.
 			// But CodeChef is nice and liberal with the number of requests, so even this is
@@ -302,61 +309,70 @@ impl unijudge::Backend for CodeChef {
 			// common case will be caught. I don't think I'll bother for other sites, since I only
 			// discovered this due to an error on my side.
 			return Err(ErrorCode::RateLimit.into());
-		}
+		}*/
+        
+				//console::debug(&format!("Response 1 {:?}",resp));
+        let resp = json::from_str::<api::Submissions>(&resp)?.data;
+        
 		// If the code was submitted as a team, but tracking is done after logout, this will return
 		// an empty list every time. But I don't think this is a common situation so let's just
 		// ignore it, until the huge tracking refactor fixes that.
 		let mut output:String="".to_string();
-		if doc.find(".dataTable")?.find_nth("tbody > tr",0).is_ok(){
-			let first_id=doc.find(".dataTable")?.find_nth("tbody > tr",0)?.find_nth("td", 0)?.text().string();
-			let ver_txt=doc.find(".dataTable")?.find_nth("tbody > tr",0)?.find_nth("td", 3)?.find_nth("span",0)?.attr("title")?.string();
+		if resp.len()>=1 {
+			let first_id=resp[0].id;
+			let ver_txt=resp[0].tooltip.clone();
 			
 			if ver_txt == "wrong answer" || ver_txt=="time limit exceeded" {
 				//console::debug(&format!("Quering {}",first_id));
-				let status=self.error_table(first_id).await?;
-				let tab_res=session.client.get(status)
-						.send().await?.text().await?;
+				let status=self.error_table_url(first_id.to_string()).await?;
+                let doc = session.client.get(status.clone()).send().await?.text().await?;
+                
+                let cap =re.captures(&doc).unwrap();
+                let csrf_tok=cap.get(1).unwrap().as_str();
+				let tab_res=session.client.get(self.error_table(first_id.to_string()).await?)
+                .header("x-csrf-token",csrf_tok).send().await?.text().await?;
 				
+				//console::debug(&format!("Response 2 {:?}",tab_res));
 				//let re= regex::Regex::new("\"testInfo\":\"([^\"]*)\"").unwrap();
 				//let cap =re.captures(&tab_res).unwrap();
          		//let tab_info=cap.get(1).unwrap().as_str();
-				let table_stat = Document::new(&tab_res);
-				//console::debug(&format!("Response {:?}",table_stat));
+                 let resp2 = json::from_str::<api::SubmissionExtraDetails>(&tab_res)?.data.other_details.testInfo; 
+				let table_stat = Document::new(&resp2);
 				let mut setofans: HashMap<String, i64> = HashMap::new();
 				//console::debug(&format!("Response {:?}",table_stat.find(".status-table")));
 				//console::debug(&format!("Response {:?}",table_stat.find(".status-table")?.find("tr")));
 				//console::debug(&format!("Response {:?}",table_stat.find(".status-table")?.find("tbody")?.find_nth("tr",3)));
+				if table_stat.find(".status-table").is_ok(){
+                    let _vals:Vec<_> = table_stat.find(".status-table")?.find("tbody")?.find_all("tr").map(|row| {
+                        //console::debug(&format!("R {:?}",row));
+                        if row.find_nth("td",2).is_ok() {
+                            //console::debug(&format!("RR {:?}",row));
+                            let verdict_td = row.find_nth("td", 2).unwrap().text().string();
+                            //console::debug(&format!("Verdict {}",verdict_td));
+                            let re= regex::Regex::new("([A-Z]+).*").unwrap();
+                            let cap =re.captures(&verdict_td).unwrap();
+                            let verdict=cap.get(1).unwrap().as_str();
+                            *setofans.entry(verdict.to_string()).or_insert(0) += 1;	
+                        };
+                    }).collect();
+                    //console::debug(&format!("{}",first_id));
+                    for (key, value) in setofans {
+                        //console::debug(&format!("keys {}-{}",key,value.to_string()));
+                        output+=&(key+" : "+&value.to_string()+",");
+                    }
+                }
 				
 				
-				let _vals:Vec<_> = table_stat.find(".status-table")?.find("tbody")?.find_all("tr").map(|row| {
-					//console::debug(&format!("R {:?}",row));
-					if row.find_nth("td",2).is_ok() {
-						//console::debug(&format!("RR {:?}",row));
-						let verdict_td = row.find_nth("td", 2).unwrap().text().string();
-						//console::debug(&format!("Verdict {}",verdict_td));
-						let re= regex::Regex::new("([A-Z]+).*").unwrap();
-						let cap =re.captures(&verdict_td).unwrap();
-						let verdict=cap.get(1).unwrap().as_str();
-						*setofans.entry(verdict.to_string()).or_insert(0) += 1;	
-					};
-				}).collect();
-				//console::debug(&format!("{}",first_id));
-				for (key, value) in setofans {
-					//console::debug(&format!("keys {}-{}",key,value.to_string()));
-					output+=&(key+" : "+&value.to_string()+",");
-				}
 				//console::debug(&format!("Output {}",output));
 			}
 		}
 		
 		
 		
-		doc.find(".dataTable")?
-			.find_all("tbody > tr").enumerate()
-			.map(|(i,row)| {
-				let id = row.find_nth("td", 0)?.text().string();
-				let verdict_td = row.find_nth("td", 3)?;
-				let verdict_text = verdict_td.text();
+		resp.iter().enumerate().map(|(i,row)| {
+				let id = row.id;
+				let verdict_td = row.tooltip.clone();
+				let verdict_text = verdict_td.clone();
 				let stat=output.clone();
                 /*let check = || -> Result<(), ErrorCode> {
                     verdict_td.find_nth("span",0)?.attr("title")?;
@@ -366,7 +382,7 @@ impl unijudge::Backend for CodeChef {
                     return Ok(Submission { id, Verdict::Pending { test: None } });
                 };*/
 				
-				let verdict = verdict_td.find_nth("span",0)?.attr("title")?.map( |verdict| match verdict {
+				let verdict = match verdict_td.as_str() {
 					"accepted" => Ok(Verdict::Accepted),
 					"wrong answer" =>{
 						if i==0
@@ -392,15 +408,15 @@ impl unijudge::Backend for CodeChef {
 					},
 					"" if verdict_text.as_str().contains("pts") => {
 						let score_regex = regex::Regex::new("\\[(.*)pts\\]").unwrap();
-						let score_matches = score_regex.captures(verdict_text.as_str()).ok_or("score regex error")?;
-						let score = score_matches[1].parse().map_err(|_| "score f64 parse error")?;
+						let score_matches = score_regex.captures(verdict_text.as_str()).ok_or("score regex error").unwrap();
+						let score = score_matches[1].parse().map_err(|_| "score f64 parse error").unwrap();
 						Ok(Verdict::Scored { score, max: Some(100.), cause: None, test: None })
 					},
-					_ => Err(format!("unrecognized verdict {:?}", verdict)),
-				})?;
+					_ => Err(format!("unrecognized verdict {:?}", verdict_td)),
+				}.unwrap();
 				
                 //if let Err(_err) = verdict 
-				Ok(Submission { id, verdict })
+				Ok(Submission { id: id.to_string(), verdict })
 			})
 			.collect()
 	}
@@ -775,16 +791,28 @@ async fn get_next_page_list(&self, session: &Session, task: &Task, page:u64,csrf
 
 	/// See [`CodeChef::active_submit_url`], but for submission list URLs.
 	async fn active_submission_url(&self, task: &Task, session: &Session) -> Result<Url> {
-		let task = self.activate_task(task, session).await?;
 		let url =
-			format!("https://www.codechef.com/{}/status/{},{}", task.contest.prefix(), task.task, session.req_user()?);
+			format!("https://www.codechef.com/api/submissions/{}/{}?limit=20&page=0&usernames={}&language=&status=", task.contest.as_virt_symbol(), task.task, session.req_user()?);
+		Ok(url.parse()?)
+	}
+
+    async fn active_submissions_url(&self, task: &Task, session: &Session) -> Result<Url> {
+		let url =
+			format!("https://www.codechef.com/status/{}?usernames={}", task.task, session.req_user()?);
+		Ok(url.parse()?)
+	}
+
+    async fn error_table_url(&self, id:String) -> Result<Url> {
+		
+		let url =
+			format!("https://www.codechef.com/viewsolution/{}",id);
 		Ok(url.parse()?)
 	}
 
 	async fn error_table(&self, id:String) -> Result<Url> {
 		
 		let url =
-			format!("https://www.codechef.com/error_status_table/{}/",id);
+			format!("https://www.codechef.com/api/submission-details/{}/",id);
 		Ok(url.parse()?)
 	}
 
@@ -869,10 +897,30 @@ mod api {
     }
 
     #[derive(Debug, Deserialize)]
+    pub struct Submissions{
+        pub data:Vec<SubmissionDetails>
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct ExtraDetails{
+        pub testInfo: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct OtherDetails{
+        pub other_details: ExtraDetails,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct SubmissionExtraDetails{
+        pub data: OtherDetails,
+    }
+
+    #[derive(Debug, Deserialize)]
     pub struct SubmissionDetails{
-        pub result_code: String,
+        pub id: u64,
         pub score: String,
-        pub upid: String,
+        pub tooltip: String,
 
     }
 

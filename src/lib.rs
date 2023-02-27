@@ -46,8 +46,8 @@ evscode::plugin! {
 	on_deactivate: Some(Box::new(|| Box::pin(launch::deactivate()))),
 	on_error: Some(Box::new(|e| Box::pin(logger::on_error(e)))),
 	extra_activations: &[
-		evscode::meta::Activation::WorkspaceContains { selector: ".icie" },
 		evscode::meta::Activation::WorkspaceContains { selector: ".icie-contest" },
+		evscode::meta::Activation::WorkspaceContains { selector: ".icie" },
 	],
 	vscode_version: "^1.33.0",
 	node_dependencies: &[
