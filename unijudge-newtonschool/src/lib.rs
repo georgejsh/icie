@@ -171,14 +171,14 @@ impl unijudge::Backend for NewtonSchool {
 		.text()
 		.await?;
 		let resp2 = json::from_str::<api::TaskDetails>(&resp_raw)?;  
-		let re= regex::Regex::new(r"Input( \d*)?:\r\n((?s).*?)(\r\n)+Sample Output( \d*)?:\r\n((?s).*?)((\r\n)+Sample|$)").unwrap();
+		let re= regex::Regex::new(r"(Sample Input|INPUT|Input)( \d*)?:?\r\n((?s).*?)(\r\n)+(Sample Output|OUTPUT|Output)( \d*)?:?\r\n((?s).*?)((\r\n)+(Sample |SAMPLE )?(Explanation|EXPLANATION)|$)").unwrap();
 		
 		let mut cases =Vec::new();
 		for cap in re.captures_iter(&resp2.assignment_question.example) {
 			//println!("I{} O{}\n\n\n", &cap[2], &cap[4]);
 			cases.push(unijudge::Example {
-				input: cap[2].to_string(),
-				output: cap[5].to_string(),
+				input: cap[3].to_string(),
+				output: cap[7].to_string(),
 			});
 		}
 		let title=resp2.assignment_question.question_title.to_owned();
@@ -389,11 +389,12 @@ impl NewtonSchool {
 		// implementation is not standard-compliant. So e.g. you can have sections with "###Example
 		// input", which CommonMark parsers ignore. Fortunately, we can ignore the HTML because
 		// Markdown permits it. Also, we add a title so that the statement looks better.
-        let re= regex::Regex::new(r"Input( \d*)?:\r\n((?s).*?)(\r\n)+Sample Output( \d*)?:\r\n((?s).*?)((\r\n)+Sample|$)").unwrap();
+        let re= regex::Regex::new(r"(Sample Input|INPUT|Input)( \d*)?:?\r\n((?s).*?)(\r\n)+(Sample Output|OUTPUT|Output)( \d*)?:?\r\n((?s).*?)((\r\n)+(Sample |SAMPLE )?(Explanation|EXPLANATION)( \d*)?:?\r\n(.*)|$)").unwrap();
 		let mut casestr = "".to_owned();
 		for cap in re.captures_iter(&compont.example) {
-			casestr.push_str("\r\n\n###Example Input\r\n```\r\n");casestr.push_str( &cap[2] );casestr.push_str("\t\r\n```\r\n\r\n");
-			casestr.push_str("\r\n\n###Example Output\r\n```\r\n");casestr.push_str( &cap[5] );casestr.push_str( "\t\r\n```\r\n\r\n");
+			casestr.push_str("\r\n\n###Example Input\r\n```\r\n");casestr.push_str( &cap[3] );casestr.push_str("\t\r\n```\r\n\r\n");
+			casestr.push_str("\r\n\n###Example Output\r\n```\r\n");casestr.push_str( &cap[7] );casestr.push_str( "\t\r\n```\r\n\r\n");
+            casestr.push_str("\r\n\n###Explanations\r\n");casestr.push_str(cap.get(13).map_or("", |m| m.as_str()) );casestr.push_str("\r\n\n");
 			//println!("I{} O{}\n\n\n", &cap[2], &cap[4]);
 		}
         let inpf= "\r\n\n###Input Format\r\n".to_owned() + &compont.input;

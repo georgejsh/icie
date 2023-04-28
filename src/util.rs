@@ -1,4 +1,5 @@
 use crate::{dir, util::path::Path};
+use crate::dir::solution;
 use evscode::{error::ResultExt, Position, E, R};
 use futures::{channel::oneshot, future::join_all};
 use std::{
@@ -16,8 +17,9 @@ pub mod retries;
 pub mod tempfile;
 
 pub async fn active_tab() -> R<SourceTarget> {
-	let source = Path::from_native(evscode::active_editor_file().await.ok_or_else(E::cancel)?);
-	Ok(if source != crate::dir::solution()? { SourceTarget::Custom(source) } else { SourceTarget::Main })
+	//let source = Path::from_native(active_editor_file.ok_or_else(E::cancel)?);
+	let source=active_editor()?;
+    Ok(if source != crate::dir::solution()? { SourceTarget::Custom(source) } else { SourceTarget::Main })
 }
 
 pub fn bash_escape(raw: &str) -> String {
@@ -177,7 +179,7 @@ pub  static mut is_contest : AtomicBool =  AtomicBool::new(false);
 		root_path=Some(path.to_string());
 		match  &terminal{
 			Some(ter)=>{
-				ter.send_text(&("cd ".to_owned()+path),Some(true));
+				ter.send_text(&("\x03cd ".to_owned()+path),Some(true));
 				ter.send_text("clear",Some(true));
 			},
 			_ => {}
@@ -206,6 +208,7 @@ pub fn set_terminal(ter:Option<Terminal>)-> (){
 use vscode_sys::TextEditor;
 use vscode_sys::Terminal;
 use wasm_bindgen::JsCast;
+static mut active_editor_file:Option<String> = None;
 /// A stream that will contain JSON messages sent by [JS inside the Window].
 pub fn listener() -> () {
 	
@@ -213,6 +216,9 @@ pub fn listener() -> () {
 		//crate::spawn(obj.unchecked_into::<TextEditor>());
 		if !obj.is_undefined() {
 			let edi=obj.unchecked_into::<TextEditor>();
+            unsafe{
+                active_editor_file=Some(edi.document().file_name());
+            }
 			set_workspace_root(&Path::from_native(edi.document().file_name()).parent().into_string());
 		}
 		
@@ -271,6 +277,14 @@ pub fn listener() -> () {
 		//}
 	}
 	Ok(Path::from_native(buf))
+}
+pub fn active_editor()->R<Path>{
+    unsafe{
+        match  &active_editor_file{
+            Some(path)=> return Ok(Path::from_native(path.to_string())),
+            _ => solution()
+        } 
+    }
 }
 pub  fn workspace_root_vscode() -> R<Path> {
 	let buf = evscode::workspace_root().map_err(suggest_open)?;

@@ -179,11 +179,12 @@ impl unijudge::Backend for AtCoder {
 				}
 				.text()
 				.string();
-				title.starts_with("Sample Input") || title.starts_with("Sample Output")
+				(title.starts_with("Sample Input") || title.starts_with("Sample Output")) && !title.starts_with("Sample Input and Output")
 			})
 			.map(|node| Ok(node.find_first("pre")?.text().string()))
 			.collect::<Result<Vec<_>>>()?;
-		let examples = Some(
+		let examples = if parts.is_empty() {None}
+        else {Some(
 			parts
 				.chunks(2)
 				.map(|pres| match pres {
@@ -191,7 +192,7 @@ impl unijudge::Backend for AtCoder {
 					_ => Err(doc.error("sample input with no matching output")),
 				})
 				.collect::<debris::Result<_>>()?,
-		);
+		)};
 		let mut statement = unijudge::statement::Rewrite::start(doc);
 		statement.fix_hide(|v| {
 			if let unijudge::scraper::Node::Element(v) = v.value() {
