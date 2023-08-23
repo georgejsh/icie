@@ -32,7 +32,15 @@ pub async fn is_directory(path: Path) -> R<bool> {
 	let (tx, rx) = make_callback2();
 	node_sys::fs::stat(path.as_str(), node_sys::fs::StatOptions { bigint: false }, tx);
 	let stat = rx.await?;
-	let nlink = js_sys::Reflect::get(&stat, &JsValue::from_str("nlink"))
+    let st =stat.unchecked_ref::<node_sys::fs::Stats>();
+    Ok(st.is_directory())
+    // st:node_sys::fs::Stats=stat.into_serde()?;
+    //Ok(js_sys::Reflect::apply(node_sys::fs::Stats::is_directory.unchecked_into(),&stat,&js_sys::Array::new()).unwrap().as_bool().unwrap())
+    //Ok(node_sys::fs::is_directory(&stat))
+    
+    //Ok(node_sys::fs::Stats::is_directory(stat))
+    
+	/*let nlink = js_sys::Reflect::get(&stat, &JsValue::from_str("nlink"))
 		.map_err(|_| E::error("javascript file stats object has no nlink "))?
 		.as_f64()
 		.unwrap();
@@ -42,8 +50,10 @@ pub async fn is_directory(path: Path) -> R<bool> {
 	}
 	else{
 		Ok(false)
-	}
+	}*/
+
 }
+
 pub async fn find_a_dir(path: &Path) -> R<Path> {
 	let lists=read_dir(path).await?;
 	for dir in lists.into_iter() {

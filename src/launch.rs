@@ -22,12 +22,12 @@ use std::convert::TryInto;
 use core::time::Duration;
 
 pub async fn activate() -> R<()> {
-	let _status = crate::STATUS.push("Launching");
+    let _status = crate::STATUS.push("Launching");
 	logger::initialize()?;
-	evscode::spawn(crate::newsletter::check());
-	if open::contest::is_contest().await?==true{
+    evscode::spawn(crate::newsletter::check());
+    if open::contest::is_contest().await?==true{
 		let _status = crate::STATUS.push("Launching from contest");
-		let sub_dirs=fs::find_a_dir(&workspace_root()?).await?;
+        let sub_dirs=fs::find_a_dir(&workspace_root()?).await?;
 		set_workspace_root(sub_dirs.as_str());
 		util::listener(); 
     }

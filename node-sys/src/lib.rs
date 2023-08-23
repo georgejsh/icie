@@ -147,6 +147,9 @@ pub mod fs {
 
 		pub type Stats;
 
+        #[wasm_bindgen(method,js_name = isDirectory)]
+		pub fn is_directory(this: &Stats) -> bool;
+
 		pub fn access(path: &str, callback: JsValue);
 
 		pub fn mkdir(path: &str, options: MkdirOptions, callback: JsValue);

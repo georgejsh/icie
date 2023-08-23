@@ -663,6 +663,12 @@ pub mod workspace {
 	#[wasm_bindgen(module = vscode)]
 	extern "C" {
 
+        pub type WorkspaceFolder;
+
+        #[wasm_bindgen(method, getter, js_name = uri)]
+        pub fn get_uri(this: &WorkspaceFolder) -> Uri;
+
+
 		#[wasm_bindgen(js_namespace = workspace, js_name = findFiles)]
 		pub fn find_files(include: &str) -> Thenable<Vec<Uri>>;
 
@@ -674,6 +680,9 @@ pub mod workspace {
 
 		#[wasm_bindgen(js_namespace = workspace, js_name = rootPath)]
 		pub static ROOT_PATH: JsValue;
+
+        #[wasm_bindgen(js_namespace = workspace, js_name = workspaceFolders)]
+		pub static workspace_Folders: Option<Vec<WorkspaceFolder>>;
 
 		#[wasm_bindgen(js_namespace = workspace, js_name = saveAll)]
 		pub fn save_all(include_untitled: bool) -> Thenable<bool>;

@@ -88,7 +88,12 @@ pub async fn edit_paste(path: &str, text: &str, position: (usize, usize)) -> R<(
 /// Get the path to workspace folder.
 /// Returns an error if no folder is opened.
 pub fn workspace_root() -> R<String> {
-	vscode_sys::workspace::ROOT_PATH.as_string().wrap("this operation requires a folder to be open")
+/*if vscode_sys::workspace::workspace_Folders.is_none() {
+    Err(E::error("this operation requires a folder to be open"))}
+else{    
+	    Ok(vscode_sys::workspace::workspace_Folders.as_ref().unwrap()[0].get_uri().fs_path())
+    }*/
+    vscode_sys::workspace::ROOT_PATH.as_string().wrap("this operation requires a folder to be open")
 }
 
 /// Get the path to the root directory of the extension installation.
