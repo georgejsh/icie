@@ -453,7 +453,7 @@ impl unijudge::Backend for CodeChef {
         let resp = json::from_str::<api::Submit>(&resp)?;
         if resp.status== "OK" {
             debug!("OK submitted");
-            Ok((resp.upid.ok_or("").unwrap()).to_owned())
+            Ok((resp.upid.ok_or("").unwrap()).to_owned().to_string())
         } else {
             return Err(ErrorCode::AlienInvasion.into());
         }
@@ -982,7 +982,7 @@ mod api {
 	pub struct Submit {
 		pub status: String,
 		#[serde(default)]
-		pub upid: Option<String>,
+		pub upid: Option<u64>,
 	}
 	#[derive(Debug, Deserialize)]
 	pub struct Ranklist {

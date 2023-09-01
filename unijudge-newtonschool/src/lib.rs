@@ -171,7 +171,7 @@ impl unijudge::Backend for NewtonSchool {
 		.text()
 		.await?;
 		let resp2 = json::from_str::<api::TaskDetails>(&resp_raw)?;  
-		let re= regex::Regex::new(r"(Sample Input|INPUT|Input)( \d*)?:?\r\n((?s).*?)(\r\n)+(Sample Output|OUTPUT|Output)( \d*)?:?\r\n((?s).*?)((\r\n)+(Sample |SAMPLE )?(Explanation|EXPLANATION)|$)").unwrap();
+		let re= regex::Regex::new(r"(Sample Input|INPUT|Input)( \d*)?([ ]+):?([ ]+)\r\n((?s).*?)(\r\n)+(Sample Output|OUTPUT|Output)( \d*)?([ ]+):?([ ]+)\r\n((?s).*?)((\r\n)+(Sample |SAMPLE )?(Explanation|EXPLANATION)?|$)").unwrap();
 		
 		let mut cases =Vec::new();
 		for cap in re.captures_iter(&resp2.assignment_question.example) {
@@ -219,7 +219,7 @@ impl unijudge::Backend for NewtonSchool {
 		else if resp2[0].wrong_submission {
 			Ok(vec![Submission { id:"ID_NA".to_owned(), verdict:Verdict::Rejected { cause: Some(RejectionCause::WrongAnswer), test: None }}])
 		}
-		else if resp2[0].compilation_error {
+		else if resp2[0].current_status==6 {
 			Ok(vec![Submission { id:"ID_NA".to_owned(), verdict:Verdict::Rejected { cause: Some(RejectionCause::CompilationError), test: None }}])
 		}else {
 			let resp_raw2 = session
@@ -527,8 +527,7 @@ mod api {
 		pub all_test_cases_passing :bool,
 		pub current_status:i64,
 		pub number_of_test_cases_passing:i64,
-		pub wrong_submission:bool,
-		pub compilation_error:bool
+		pub wrong_submission:bool
 	}
 	
 	#[derive(Debug, Deserialize)]
