@@ -648,7 +648,10 @@ impl HackerEarth {
 			let tasks:Vec<Result<Task>>= doc.find("#problems-list-table")?
 			.find_all("tbody > tr")
 			.filter(|row| {
-				let row_class=row.attr("class").unwrap().string();
+				let row_class=match row.attr("class"){
+                    Ok(val) => val.string(),
+                    Err(_) => "".to_string()
+                };
 				row_class != "empty-tr" && row_class!= "disabled-problem" 
 			}).enumerate()
     		.map(|(i,row)| {

@@ -1,4 +1,4 @@
-use crate::util::{node_hrtime, path::Path, sleep, workspace_root};
+use crate::util::{node_hrtime, path::Path, sleep, workspace_root,OS};
 use evscode::{E, R};
 use futures::{
 	channel::{mpsc, oneshot}, future::join3, FutureExt, StreamExt
@@ -111,14 +111,20 @@ impl Executable {
 
     pub async fn run_start(&self, environment: &Environment) -> R<Running> {
 		let js_args = js_sys::Array::new();
-        js_args.push(&JsValue::from_str("-i0"));
-        js_args.push(&JsValue::from_str("-o0"));
-        js_args.push(&JsValue::from_str("-e0"));
-        js_args.push(&JsValue::from_str(&self.command));
+        let mut command=&"setbuf".to_string();
+        if let Ok(OS::Linux) = OS::query() {
+          js_args.push(&JsValue::from_str("-i0"));
+          js_args.push(&JsValue::from_str("-o0"));
+          js_args.push(&JsValue::from_str("-e0"));
+          js_args.push(&JsValue::from_str(&self.command));
+        }else {
+            command= &self.command;
+        }
         
 		let cwd = environment.cwd.clone().or_else(|| workspace_root().ok());
-		let kid = node_sys::child_process::spawn("stdbuf", js_args, node_sys::child_process::Options {
-			cwd: cwd.as_ref().map(Path::as_str),
+        
+		let kid = node_sys::child_process::spawn(&command, js_args, node_sys::child_process::Options {
+				cwd: cwd.as_ref().map(Path::as_str),
 			env: None,
 			argv0: None,
 			stdio: Some([Stdio::Overlapped, Stdio::Overlapped, Stdio::Overlapped]),

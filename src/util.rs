@@ -176,14 +176,22 @@ pub  static mut is_contest : AtomicBool =  AtomicBool::new(false);
 	}*/
 	unsafe{
 		*is_contest.get_mut() = true;
+        match &root_path{
+            Some(prev_path)=>{
+                if prev_path.to_owned() != path.to_string(){
+                    match  &terminal{
+                        Some(ter)=>{
+                            ter.send_text(&("\x03cd ".to_owned()+path),Some(true));
+                            ter.send_text("clear",Some(true));
+                        },
+                        _ => {}
+                    }
+                }
+            },
+            _ => {}
+        }
 		root_path=Some(path.to_string());
-		match  &terminal{
-			Some(ter)=>{
-				ter.send_text(&("\x03cd ".to_owned()+path),Some(true));
-				ter.send_text("clear",Some(true));
-			},
-			_ => {}
-		} 
+		 
 		//is_contest.
 	}
 }

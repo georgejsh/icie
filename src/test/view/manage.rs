@@ -175,6 +175,9 @@ impl Behaviour for TestView {
                     
                         *recver2.lock().unwrap() = None;
                         *kidv2.lock().unwrap() = None;
+                        while let None = run_spawn.kid.exit_code() {
+                            sleep(Duration::from_millis(100)).await;
+                        }
                         let excode=run_spawn.kid.exit_code().unwrap();
                         //drop(_status);
                         //Err(E::error(format!("exit code {:?}",extcode)))
