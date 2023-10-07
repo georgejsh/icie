@@ -33,7 +33,7 @@ pub struct Status {
 	pub warnings: Vec<Message>,
 }
 
-pub const SOURCE_EXTENSIONS: &[&str] = &["cpp", "cxx", "cc"];
+pub const SOURCE_EXTENSIONS: &[&str] = &["cpp", "cxx", "cc","java"];
 
 /// When a compilation error appears, the cursor will automatically move to the file and location
 /// which caused the error. Regardless of this setting, an error message containing error details
@@ -44,7 +44,7 @@ static AUTO_MOVE_TO_ERROR: vscode::Config<bool> = true;
 /// An extension used to denote executable files. For example, if this entry is set to "xyz",
 /// compiling a source file called main.cpp will create an executable called main.xyz.
 #[evscode::config]
-static EXECUTABLE_EXTENSION: evscode::Config<String> = "e";
+static EXECUTABLE_EXTENSION: evscode::Config<String> = "exe";
 
 /// C++ ISO language standard version. This corresponds to e.g. -std=c++17 flag on GCC/Clang. Be
 /// aware some of these options may not be supported by your compiler, which will result in an
