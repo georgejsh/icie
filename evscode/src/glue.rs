@@ -89,7 +89,7 @@ fn panic_hook(info: &PanicInfo) {
 pub(crate) static PACKAGE: OnceCell<Package> = OnceCell::new();
 pub(crate) static CONFIG_ENTRIES: OnceCell<Vec<ConfigEntry>> = OnceCell::new();
 thread_local! {
-	pub(crate) static EXTENSION_CONTEXT: OnceCell<JsValue> = OnceCell::new();
+	pub static EXTENSION_CONTEXT: OnceCell<JsValue> = OnceCell::new();
 }
 pub(crate) static EXTENSION_PATH: OnceCell<String> = OnceCell::new();
 thread_local! {

@@ -42,6 +42,20 @@ const MINGW: Service = Service {
 	supports_macos: false,
 };
 
+const MSVC: Service = Service {
+	human_name: "MSVC",
+	exec_linuxmac: None,
+	exec_windows: Some("cl.exe"),
+	package_apt: None,
+	package_brew: None,
+	package_pacman: None,
+	tutorial_url_windows: Some("https://stackoverflow.com/questions/69305821/compile-c-programs-from-windows-powershell-with-msvc"),
+	supports_linux: false,
+	supports_windows: true,
+	supports_macos: false,
+};
+
+
 pub async fn compile(
 	sources: &[&Path],
 	output_path: &Path,
@@ -70,6 +84,14 @@ async fn find_compiler() -> R<Compiler> {
 }
 
 async fn find_compiler_mingw() -> R<Compiler> {
+
+    /*let executable = MSVC.find_executable().await;
+    match executable{
+        Ok(exec) => return Ok(Compiler { executable:exec, mingw_path: None }),
+        Err(_) => todo!()
+    } */
+	
+
 	let mingw_custom_path = WINDOWS_MINGW_PATH.get();
 	// Various MinGW installers install this in various paths. CodeBlocks installs it in
 	// "C:\Program Files (x64)\CodeBlocks\MinGW", but it's version does not work anyway so
@@ -88,6 +110,9 @@ async fn find_compiler_mingw() -> R<Compiler> {
 			return Ok(Compiler { executable: Executable::new(location), mingw_path: Some(mingw) });
 		}
 	}
+
+    //return Ok(Compiler { executable: Executable::new("cl"), mingw_path:  None});
+    
 	Err(MINGW.not_installed().await?)
 }
 
@@ -119,7 +144,7 @@ fn flags_os_specific() -> &'static [&'static str] {
 		// Sanitizers don't work because -lubsan is not found. There does not seem to be a fix.
 		// Static linking makes it possible to avoid adding MinGW DLLs to PATH.
 		Ok(OS::Windows) => &["-fno-sanitize=all", "-static"],
-		_ => &[],
+		_ => &["-Wall", "-Wextra", "-Wconversion", "-Wshadow", "-Wno-sign-conversion" ],
 	}
 }
 
