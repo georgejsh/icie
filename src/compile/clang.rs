@@ -85,11 +85,11 @@ async fn find_compiler() -> R<Compiler> {
 
 async fn find_compiler_mingw() -> R<Compiler> {
 
-    let executable = MSVC.find_executable().await;
+    /*let executable = MSVC.find_executable().await;
     match executable{
         Ok(exec) => return Ok(Compiler { executable:exec, mingw_path: None }),
         Err(_) => todo!()
-    } 
+    } */
 	
 
 	let mingw_custom_path = WINDOWS_MINGW_PATH.get();
@@ -144,7 +144,7 @@ fn flags_os_specific() -> &'static [&'static str] {
 		// Sanitizers don't work because -lubsan is not found. There does not seem to be a fix.
 		// Static linking makes it possible to avoid adding MinGW DLLs to PATH.
 		Ok(OS::Windows) => &["-fno-sanitize=all", "-static"],
-		_ => &[],
+		_ => &["-Wall", "-Wextra", "-Wconversion", "-Wshadow", "-Wno-sign-conversion" ],
 	}
 }
 

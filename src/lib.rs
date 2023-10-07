@@ -49,8 +49,8 @@ evscode::plugin! {
 		evscode::meta::Activation::WorkspaceContains { selector: ".icie-contest" },
 		evscode::meta::Activation::WorkspaceContains { selector: ".icie" },
 	],
-	vscode_version: "^1.33.0",
+	vscode_version: "^1.61.0",
 	node_dependencies: &[
-		("node-fetch", "2.6.0"),
+		("node-fetch", "2.6.0"),       
 	],
 }

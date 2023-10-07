@@ -17,6 +17,10 @@ pub enum Standard {
 	Cpp17,
 	#[evscode(name = "C++20")]
 	FutureCpp20,
+    #[evscode(name = "Java 11")]
+	Java11,
+    #[evscode(name = "Java 17")]
+	Java17,    
 }
 
 impl Codegen {
@@ -38,7 +42,8 @@ impl Standard {
 			Standard::Cpp11 => "-std=c++11",
 			Standard::Cpp14 => "-std=c++14",
 			Standard::Cpp17 => "-std=c++17",
-			Standard::FutureCpp20 => "-std=c++2a",
+			Standard::FutureCpp20 => "-std=c++20",
+            Standard::Java11 | Standard::Java17 => todo!(),
 		}
 	}
 }

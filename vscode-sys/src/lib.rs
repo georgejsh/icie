@@ -121,6 +121,8 @@ thenable_impl_jscast!(TextDocument);
 thenable_impl_jscast!(Uri);
 thenable_impl_jscast!(EventEmitter);
 //unsafe impl Sync for TreeDataProvider {}
+
+use js_sys::Promise;
 #[wasm_bindgen(module = vscode)]
 extern "C" {
 
@@ -142,6 +144,24 @@ extern "C" {
 
 	#[wasm_bindgen(method, getter, js_name = extensionPath)]
 	pub fn get_extension_path(this: &ExtensionContext) -> String;
+
+	pub type SecretStorage;
+	/// Returns Option<String>.
+	#[wasm_bindgen(method, js_name = get)]
+	pub fn get_password(this: &SecretStorage, account: &str) -> Thenable<Option<String>>;
+
+	/// Returns ().
+	#[wasm_bindgen(method,js_name = store)]
+	pub fn set_password(this: &SecretStorage, account: &str, password: &str) -> Thenable<()>;
+
+	/// Returns bool.
+	#[wasm_bindgen(method,js_name = delete)]
+	pub fn delete_password(this: &SecretStorage, account: &str) -> Thenable<()>;
+    
+    #[wasm_bindgen(method, getter, js_name = secrets)]
+	pub fn get_secrets(this: &ExtensionContext) -> SecretStorage;
+
+    
 
 	#[wasm_bindgen(method, getter, js_name = globalState)]
 	pub fn global_state(this: &ExtensionContext) -> Memento;

@@ -3,12 +3,12 @@
 
 #![feature(const_fn_trait_bound, try_trait_v2,async_closure)]
 #![allow(clippy::new_ret_no_self)]
-#![deny(missing_docs)]
+
 #![feature(type_alias_impl_trait)]
 
 pub mod config;
 pub mod error;
-mod glue;
+pub mod glue;
 pub mod goodies;
 #[doc(hidden)]
 pub mod macros;

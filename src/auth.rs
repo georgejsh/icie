@@ -1,7 +1,9 @@
 use crate::util::is_installed;
-use evscode::{error::Severity, E, R};
+use evscode::{error::Severity, E, R,glue};
 use wasm_bindgen_futures::JsFuture;
-
+use wasm_bindgen::{JsCast, JsValue};
+use log::info;
+use node_sys::console;
 // TODO: check how errors work w/o libsecret/gnome-keyring
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -72,8 +74,8 @@ async fn reset_from_list() -> R<()> {
 	let credentials_list = Keyring::list().await;
 	let credentials = evscode::QuickPick::new()
 		.items(credentials_list.into_iter().map(|credentials| {
-			let label = credentials.account.clone();
-			evscode::quick_pick::Item::new(credentials.account, label)
+			let label = credentials.clone();
+			evscode::quick_pick::Item::new(credentials, label)
 		}))
 		.show()
 		.await
@@ -97,15 +99,38 @@ impl Keyring {
 
 	async fn get(&self) -> Option<String> {
 		let entry = format!("@{} {}", self.kind, self.site);
-		match JsFuture::from(keytar_sys::get_password("ICIE", &entry)).await {
-			Ok(val) => val.as_string(),
-			Err(_) => None,
-		}
+        
+		
+        let secret = glue::EXTENSION_CONTEXT
+        .with(|ext_ctx| vscode_sys::ExtensionContext::get_secrets(ext_ctx.get().unwrap().unchecked_ref::<vscode_sys::ExtensionContext>()));
+        
+		let all_list = match secret.get_password(&entry).await {
+			Some(val) => {
+                //console::debug(&format!("requesting: {} ---{}",entry,val));
+                //self.delete().await;
+                    Some(val)
+            },
+            _ => None
+		};        
+        return all_list;
 	}
 
-	async fn set(&self, value: &str) -> bool {
+	async fn set(&self, value: &str)-> bool {
 		let entry = format!("@{} {}", self.kind, self.site);
-		JsFuture::from(keytar_sys::set_password("ICIE", &entry, value)).await.is_ok()
+        let entryall = "all";;
+        
+        let secret = glue::EXTENSION_CONTEXT
+        .with(|ext_ctx| vscode_sys::ExtensionContext::get_secrets(ext_ctx.get().unwrap().unchecked_ref::<vscode_sys::ExtensionContext>()));
+        
+        let mut all_list = match secret.get_password(&entryall).await {
+			Some(val) => val,
+            _ => "".to_string()
+		};
+        all_list+=&("#".to_owned()+&entry);
+        
+        secret.set_password(&entryall,&all_list).await;
+		secret.set_password(&entry, value).await;
+        true
 	}
 
 	async fn delete(&self) {
@@ -113,14 +138,40 @@ impl Keyring {
 		Keyring::delete_entry(&entry).await
 	}
 
-	async fn list() -> Vec<keytar_sys::Credentials> {
-		match JsFuture::from(keytar_sys::find_credentials("ICIE")).await {
-			Ok(val) => val.into_serde().unwrap(),
-			Err(_) => Vec::new(),
-		}
+	async fn list() -> Vec<String> {
+		let entryall = "all";
+        
+        let secret = glue::EXTENSION_CONTEXT
+        .with(|ext_ctx| vscode_sys::ExtensionContext::get_secrets(ext_ctx.get().unwrap().unchecked_ref::<vscode_sys::ExtensionContext>()));
+        
+        let all_list = match secret.get_password(&entryall).await {
+			Some(val) => val,
+            _ => "".to_string()
+		};
+        let mut uniq:Vec<String>=all_list.split('#').collect::<Vec<_>>().iter().filter(|s| !s.is_empty()).map(|s| s.to_string()).collect();
+        uniq.sort();
+        uniq.dedup();
+        uniq        
 	}
 
 	async fn delete_entry(entry: &str) {
-		let _ = JsFuture::from(keytar_sys::delete_password("ICIE", entry)).await;
+        let secret = glue::EXTENSION_CONTEXT
+        .with(|ext_ctx| vscode_sys::ExtensionContext::get_secrets(ext_ctx.get().unwrap().unchecked_ref::<vscode_sys::ExtensionContext>()));
+        
+		secret.delete_password(entry).await;
+//        console::debug(&format!("deleting: {}",entry));
+          
+        let entryall = "all";
+        
+        let secret = glue::EXTENSION_CONTEXT
+        .with(|ext_ctx| vscode_sys::ExtensionContext::get_secrets(ext_ctx.get().unwrap().unchecked_ref::<vscode_sys::ExtensionContext>()));
+        
+        let mut all_list = match secret.get_password(&entryall).await {
+			Some(val) => val,
+            _ => "".to_string()
+		};
+        let all_vals: Vec<_>=all_list.split('#').collect::<Vec<&str>>().iter().filter(|s| (**s)!=entry).map(|s| s.to_string()).collect();
+        secret.set_password(&entryall,&all_vals.join("#")).await;
+		        
 	}
 }
