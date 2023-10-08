@@ -23,7 +23,7 @@ async fn create_manifest(workspace: &Path, url: &Option<String>, statement: Opti
 }
 
 async fn create_template(workspace: &Path) -> R<()> {
-	let solution = workspace.join(format!("{}.{}", dir::SOLUTION_STEM.get(), dir::CPP_EXTENSION.get()));
+	let solution = workspace.join(format!("{}.{}", dir::SOLUTION_STEM.get(), dir::EXTENSION.get()));
 	if !fs::exists(&solution).await? {
 		let template = template::load_solution().await?;
 		fs::write(&solution, template.code).await?;

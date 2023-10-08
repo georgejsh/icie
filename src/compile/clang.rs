@@ -5,10 +5,11 @@ use evscode::R;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use util::path::Path;
-
+use crate::compile::STANDARD;
 struct Compiler {
 	executable: Executable,
 	mingw_path: Option<Path>,
+    flags: Option<&'static [&'static str]>
 }
 
 const CLANG: Service = Service {
@@ -25,6 +26,26 @@ const CLANG: Service = Service {
 	supports_linux: true,
 	supports_windows: false,
 	supports_macos: true,
+    compile_flags: Some(&["-Wall","-Wextra","-Wconversion","-Wshadow", "-Wno-sign-conversion"]),
+    run_flags: None
+};
+
+const JAVA: Service = Service {
+	human_name: "Java ",
+	exec_linuxmac: Some("javac"),
+	exec_windows: Some("javac.exe"),
+	package_apt: Some("openjdk"),
+	// On macOS, Clang is supposed to be installed along with some part of Xcode.
+	// Also trying to run the command will display a dialog asking the user to install it.
+	// In this very specific situation, macOS seems pretty nice.
+	package_brew: None,
+	package_pacman: Some("openjdk"),
+	tutorial_url_windows: None,
+	supports_linux: true,
+	supports_windows: true,
+	supports_macos: true,
+    compile_flags: None,
+    run_flags: None
 };
 
 // Searching for MinGW is more complex than searching for Linux/macOS executables, so this is just
@@ -40,6 +61,8 @@ const MINGW: Service = Service {
 	supports_linux: false,
 	supports_windows: true,
 	supports_macos: false,
+    compile_flags: Some(&["-fno-sanitize=all", "-static"]),
+    run_flags: None
 };
 
 const MSVC: Service = Service {
@@ -53,8 +76,9 @@ const MSVC: Service = Service {
 	supports_linux: false,
 	supports_windows: true,
 	supports_macos: false,
+    compile_flags: None,
+    run_flags: None
 };
-
 
 pub async fn compile(
 	sources: &[&Path],
@@ -65,7 +89,11 @@ pub async fn compile(
 ) -> R<Status> {
 	let compiler = find_compiler().await?;
 	let executable = Executable::new(output_path.to_owned());
-	let args = collect_compiler_flags(sources, output_path, standard, codegen, custom_flags);
+	let mut args = collect_compiler_flags(sources, output_path, standard, codegen, custom_flags);
+    match compiler.flags{
+        Some(flag)=> {args.extend(flag);},
+        _ => {}
+    }
 	let environment = get_compiler_environment(&compiler);
 	let run = compiler.executable.run("", &args, &environment).await?;
 	let (errors, warnings) = parse_clang_output(&run.stderr);
@@ -74,11 +102,15 @@ pub async fn compile(
 }
 
 async fn find_compiler() -> R<Compiler> {
-	match OS::query()? {
+    if (!STANDARD.get().is_cpp()){            
+        let executable = JAVA.find_executable().await?;
+        return Ok(Compiler { executable, mingw_path: None, flags: JAVA.compile_flags});
+    }
+    match OS::query()? {
 		OS::Linux | OS::MacOS => {
-			let executable = CLANG.find_executable().await?;
-			Ok(Compiler { executable, mingw_path: None })
-		},
+                let executable = CLANG.find_executable().await?;
+                Ok(Compiler { executable, mingw_path: None, flags: CLANG.compile_flags})
+        },
 		OS::Windows => find_compiler_mingw().await,
 	}
 }
@@ -91,9 +123,13 @@ async fn find_compiler_mingw() -> R<Compiler> {
         Err(_) => todo!()
     } */
 	
-
+    
 	let mingw_custom_path = WINDOWS_MINGW_PATH.get();
-	// Various MinGW installers install this in various paths. CodeBlocks installs it in
+    /*let msvc_custom_path = WINDOWS_MSVC_PATH.get();
+	if !msvc_custom_path.is_empty(){
+        return Ok(Compiler { executable: Executable::new(Path::from_native("cl.exe".into())), mingw_path:None, msvc_path: Some( Path::from_native(msvc_custom_path.to_owned())) });
+    }*/
+    // Various MinGW installers install this in various paths. CodeBlocks installs it in
 	// "C:\Program Files (x64)\CodeBlocks\MinGW", but it's version does not work anyway so
 	// there is no point in supporting it. mingw-builds try to install it in user directory
 	// be default, but that's irritating to find so the tutorial asks them to install it in
@@ -107,7 +143,7 @@ async fn find_compiler_mingw() -> R<Compiler> {
 		let mingw = Path::from_native(mingw.to_owned());
 		let location = mingw.join("bin").join("g++.exe");
 		if fs::exists(&location).await? {
-			return Ok(Compiler { executable: Executable::new(location), mingw_path: Some(mingw) });
+			return Ok(Compiler { executable: Executable::new(location), mingw_path: Some(mingw) , flags: MINGW.compile_flags});
 		}
 	}
 
@@ -124,18 +160,21 @@ fn collect_compiler_flags<'a>(
 	custom_flags: &'a [String],
 ) -> Vec<&'a str> {
 	let mut args = Vec::new();
-	args.push(standard.flag_clang());
+	args.extend(standard.flag_clang());
 	// -Wconversion displays warnings on lossy implicit conversions between i32/i64, u32/u64 and
 	// others. These are awful to debug because no small tests trigger them, and using exclusively
 	// i64 can hurt performance too much. -Wno-sign-conversions disables warnings on i32 to u32
 	// conversions, because that happens every time a vector is indexed with an int.
-	args.extend(&["-Wall", "-Wextra", "-Wconversion", "-Wshadow", "-Wno-sign-conversion"]);
-	args.extend(codegen.flags_clang());
-	args.extend(flags_os_specific());
+	//args.extend(&["-Wall", "-Wextra", "-Wconversion", "-Wshadow", "-Wno-sign-conversion"]);
+	//args
+    args.extend(codegen.flags_clang());
+	//args.extend(flags_os_specific());
 	args.extend(custom_flags.iter().map(String::as_str));
 	args.extend(sources.iter().copied().map(Path::as_str));
-	args.push("-o");
-	args.push(output_path);
+	if(STANDARD.get().is_cpp()){
+        args.push("-o");
+	    args.push(output_path);
+    }
 	args
 }
 
@@ -143,11 +182,11 @@ fn flags_os_specific() -> &'static [&'static str] {
 	match OS::query() {
 		// Sanitizers don't work because -lubsan is not found. There does not seem to be a fix.
 		// Static linking makes it possible to avoid adding MinGW DLLs to PATH.
-		Ok(OS::Windows) => &["-fno-sanitize=all", "-static"],
-		_ => &["-Wall", "-Wextra", "-Wconversion", "-Wshadow", "-Wno-sign-conversion" ],
+		Ok(OS::Windows) => &[""],
+		_ => &["" ],
 	}
 }
-
+//call "C:\Program Files (x86)\Microsoft Visual Studio\2017\WDExpress\VC\Auxiliary\Build\vcvarsx86_amd64.bat"
 fn get_compiler_environment(compiler: &Compiler) -> Environment {
 	Environment {
 		time_limit: None,
@@ -161,7 +200,7 @@ fn get_compiler_environment(compiler: &Compiler) -> Environment {
 
 fn parse_clang_output(stderr: &str) -> (Vec<Message>, Vec<Message>) {
 	static COMPILATION_ERROR: Lazy<Regex> =
-		Lazy::new(|| Regex::new("(.*):([0-9]+):([0-9]+): (error|warning|fatal error): (.*)\\n").unwrap());
+		Lazy::new(|| Regex::new("(.*?):([0-9]+):([0-9]*):? (error|warning|fatal error): (.*)\\n").unwrap());
 	static LINKING_ERROR: Lazy<Regex> = Lazy::new(|| Regex::new(".*(undefined reference to .*)").unwrap());
 
 	let mut errors = Vec::new();
@@ -169,7 +208,7 @@ fn parse_clang_output(stderr: &str) -> (Vec<Message>, Vec<Message>) {
 	for cap in COMPILATION_ERROR.captures_iter(stderr) {
 		let path = Path::from_native(cap[1].to_owned());
 		let line = cap[2].parse().unwrap();
-		let column = cap[3].parse().unwrap();
+		let column = cap.get(3).map_or("0", |m| m.as_str()).parse().unwrap_or(0);
 		let severity = &cap[4];
 		let message = cap[5].to_owned();
 		let location = Some(Location { path, line, column });

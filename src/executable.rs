@@ -9,13 +9,13 @@ use std::{
 	future::Future, sync::atomic::{AtomicBool, Ordering::SeqCst}, time::Duration
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue, __rt::core::pin::Pin};
-
+use evscode::console;
 #[derive(Debug, Eq, PartialEq)]
 pub enum ExitKind {
 	Normal,
 	TimeLimitExceeded,
 }
-
+use crate::compile::STANDARD;
 #[derive(Debug)]
 pub struct Run {
 	pub stdout: String,
@@ -57,13 +57,25 @@ impl Executable {
 	}
 
 	pub async fn run(&self, input: &str, args: &[&str], environment: &Environment) -> R<Run> {
-		let js_args = js_sys::Array::new();
+        let mut js_args = js_sys::Array::new();
+        
+        //console::log(console::Level::Info , &format!("Here {}",self.command));
+		//let args_local= STANDARD.get().get_(&self.command);
+        let mut comm = self.command.clone();
+        if(!STANDARD.get().is_cpp() && self.command.contains(".class")){
+            let class_name = Path::from_native(self.command.clone()).file_stem();
+            js_args.push(&JsValue::from_str(&class_name));
+            comm="java".to_string();
+        }
+		
 		for arg in args {
 			js_args.push(&JsValue::from_str(arg));
+            //console::log(console::Level::Info , &format!("Here {}",arg));
 		}
+        //console::log(console::Level::Info , &format!("Here {}",self.command));
 		let input_buffer = node_sys::buffer::Buffer::from(js_sys::Uint8Array::from(input.as_bytes()));
 		let cwd = environment.cwd.clone().or_else(|| workspace_root().ok());
-		let kid = node_sys::child_process::spawn(&self.command, js_args, node_sys::child_process::Options {
+        let kid = node_sys::child_process::spawn(&comm, js_args, node_sys::child_process::Options {
 			cwd: cwd.as_ref().map(Path::as_str),
 			env: None,
 			argv0: None,
@@ -110,16 +122,24 @@ impl Executable {
 	}
 
     pub async fn run_start(&self, environment: &Environment) -> R<Running> {
-		let js_args = js_sys::Array::new();
-        let mut command=&"setbuf".to_string();
+		let mut js_args = js_sys::Array::new();
+        let mut command="setbuf";
+        let mut comm= self.command.clone();
+        if(!STANDARD.get().is_cpp() && self.command.contains(".class")){
+            let class_name = Path::from_native(self.command.clone()).file_stem();
+            js_args.push(&JsValue::from_str(&class_name));
+            comm="java".to_string();
+        }
+
         if let Ok(OS::Linux) = OS::query() {
           js_args.push(&JsValue::from_str("-i0"));
           js_args.push(&JsValue::from_str("-o0"));
           js_args.push(&JsValue::from_str("-e0"));
-          js_args.push(&JsValue::from_str(&self.command));
+          js_args.push(&JsValue::from_str(&comm));
         }else {
-            command= &self.command;
+            command= &comm;
         }
+        
         
 		let cwd = environment.cwd.clone().or_else(|| workspace_root().ok());
         

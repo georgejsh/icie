@@ -14,6 +14,8 @@ pub const GDB: Service = Service {
 	supports_linux: true,
 	supports_windows: false,
 	supports_macos: true,
+    compile_flags: None,
+    run_flags: None
 };
 
 pub const RR: Service = Service {
@@ -27,6 +29,8 @@ pub const RR: Service = Service {
 	supports_linux: true,
 	supports_windows: false,
 	supports_macos: false,
+    compile_flags: None,
+    run_flags: None
 };
 
 pub async fn gdb(in_path: &Path, source: SourceTarget) -> R<()> {

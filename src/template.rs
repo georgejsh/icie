@@ -99,7 +99,7 @@ pub async fn load_solution() -> R<LoadedTemplate> {
 			load_additional(&path).await.map_err(|e| e.action("Configure C++ template", configure()))?
 		},
 		_ => LoadedTemplate {
-			suggested_filename: format!("{}.{}", dir::SOLUTION_STEM.get(), dir::CPP_EXTENSION.get()),
+			suggested_filename: format!("{}.{}", dir::SOLUTION_STEM.get(), dir::EXTENSION.get()),
 			code: default_solution()?,
 		},
 	};
@@ -139,11 +139,11 @@ pub async fn load_additional(path: &str) -> R<LoadedTemplate> {
 
 fn additional_suggested_filename(path: &str) -> String {
 	if path == PSEUDOPATH_BRUTE_FORCE {
-		format!("{}.{}", dir::BRUTE_FORCE_STEM.get(), dir::CPP_EXTENSION.get())
+		format!("{}.{}", dir::BRUTE_FORCE_STEM.get(), dir::EXTENSION.get())
 	} else if path == PSEUDOPATH_TEST_GENERATOR {
-		format!("{}.{}", dir::TEST_GENERATOR_STEM.get(), dir::CPP_EXTENSION.get())
+		format!("{}.{}", dir::TEST_GENERATOR_STEM.get(), dir::EXTENSION.get())
 	} else if path == PSEUDOPATH_CHECKER {
-		format!("{}.{}", dir::CHECKER_STEM.get(), dir::CPP_EXTENSION.get())
+		format!("{}.{}", dir::CHECKER_STEM.get(), dir::EXTENSION.get())
 	} else {
 		let path = util::expand_path(path);
 		path.file_name()

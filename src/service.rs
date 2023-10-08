@@ -14,6 +14,8 @@ pub struct Service {
 	pub supports_linux: bool,
 	pub supports_windows: bool,
 	pub supports_macos: bool,
+    pub compile_flags: Option<&'static [&'static str]>,
+    pub run_flags: Option<&'static [&'static str]>
 }
 
 impl Service {
