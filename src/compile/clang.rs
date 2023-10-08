@@ -208,7 +208,7 @@ fn parse_clang_output(stderr: &str) -> (Vec<Message>, Vec<Message>) {
 	for cap in COMPILATION_ERROR.captures_iter(stderr) {
 		let path = Path::from_native(cap[1].to_owned());
 		let line = cap[2].parse().unwrap();
-		let column = cap.get(3).map_or("0", |m| m.as_str()).parse().unwrap_or(0);
+		let column = cap.get(3).map_or("1", |m| m.as_str()).parse().unwrap_or(1);
 		let severity = &cap[4];
 		let message = cap[5].to_owned();
 		let location = Some(Location { path, line, column });

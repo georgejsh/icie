@@ -7,7 +7,7 @@ use std::time::Duration;
 use unijudge::{
 	boxed::{BoxedContest, BoxedTask}, Backend, Language, Resource, Submission
 };
-
+use crate::compile::STANDARD;
 const TRACK_DELAY: Duration = Duration::from_secs(5);
 const TRACK_NOT_SEEN_RETRY_LIMIT: usize = 4;
 const TRACK_NOT_SEEN_RETRY_DELAY: Duration = Duration::from_secs(5);
@@ -57,7 +57,11 @@ async fn send_after_tests_passed() -> R<()> {
 	let _status = crate::STATUS.push("Submitting to site");
 	let code = fs::read_to_string(&dir::solution()?).await?;
 	let (sess, task) = connect_to_workspace_task().await?;
-	let language = fetch_cpp_language(&task, &sess).await?;
+	let language = if STANDARD.get().is_cpp() {
+        fetch_cpp_language(&task, &sess).await?
+    }else {
+        fetch_java_language(&task, &sess).await?
+    };
 	let submit_id = sess.run(|backend, sess| backend.task_submit(sess, &task, &language, &code)).await?;
 	drop(_status);
 	track(&sess, &task, &submit_id).await?;
@@ -79,6 +83,18 @@ async fn fetch_cpp_language(task: &BoxedTask, sess: &Session) -> R<Language> {
 	debug!("found {} supported languages", languages.len());
 	let language = languages.iter().find(|lang| sess.backend.cpp.contains(&&*lang.name)).ok_or_else(|| {
 		E::error(format!("not found language {:?}", sess.backend.cpp))
+			.context("this task does not seem to allow C++ solutions")
+			.extended(format!("{:#?}", languages))
+	})?;
+	Ok(language.clone())
+}
+
+
+async fn fetch_java_language(task: &BoxedTask, sess: &Session) -> R<Language> {
+	let languages = fetch_languages(task, sess).await?;
+	debug!("found {} supported languages", languages.len());
+	let language = languages.iter().find(|lang| sess.backend.java.contains(&&*lang.name)).ok_or_else(|| {
+		E::error(format!("not found language {:?}", sess.backend.java))
 			.context("this task does not seem to allow C++ solutions")
 			.extended(format!("{:#?}", languages))
 	})?;

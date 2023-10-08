@@ -368,7 +368,8 @@ impl unijudge::Backend for HackerEarth {
 	
 
 	async fn task_languages(&self, _session: &Self::Session, _task: &Self::Task) -> Result<Vec<Language>> {
-		Ok(vec![ Language { id: "CPP17".to_owned(), name: "C++17".to_owned()}])
+		Ok(vec![ Language { id: "CPP17".to_owned(), name: "C++17".to_owned()},
+        Language { id: "JAVA8".to_owned(), name: "Java 8".to_owned()}])
 	}
 
 	async fn task_submissions(&self, session: &Self::Session, task: &Self::Task)  -> Result<Vec<Submission>> {

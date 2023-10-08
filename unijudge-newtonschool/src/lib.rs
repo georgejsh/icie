@@ -197,7 +197,8 @@ impl unijudge::Backend for NewtonSchool {
 	
 
 	async fn task_languages(&self, _session: &Self::Session, _task: &Self::Task) -> Result<Vec<Language>> {
-		Ok(vec![ Language { id: "54".to_owned(), name: "C++ (GCC 9.2.0)".to_owned()}])
+		Ok(vec![ Language { id: "54".to_owned(), name: "C++ (GCC 9.2.0)".to_owned()},
+        Language { id: "62".to_owned(), name: "Java (OpenJDK 13.0.1)".to_owned()}])
 	}
 
 	async fn task_submissions(&self, session: &Self::Session, task: &Self::Task)  -> Result<Vec<Submission>> {

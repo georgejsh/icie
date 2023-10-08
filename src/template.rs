@@ -202,8 +202,20 @@ fn default_checker() -> R<String> {
 "#,
 	)
 }
-
+use crate::compile::STANDARD;
+use crate::dir::SOLUTION_STEM;
 fn generate(prelude: &str, main_args: bool, main_prelude: &str) -> R<String> {
+    if !STANDARD.get().is_cpp(){
+        return Ok(format!(
+            r#"{}
+            public class {} {{
+                public static void main(String[] args) {{
+
+                }}
+            }}   
+            
+    "#  ,prelude,SOLUTION_STEM.get()));
+    }
 	// TODO: Does bits/stdc++.h work on macOS? I heard it doesn't.
 	let includes = match OS::query()? {
 		OS::Linux => "#include <bits/stdc++.h>",
