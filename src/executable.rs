@@ -111,7 +111,7 @@ impl Executable {
 
     pub async fn run_start(&self, environment: &Environment) -> R<Running> {
 		let js_args = js_sys::Array::new();
-        let mut command=&"setbuf".to_string();
+        let mut command=&"stdbuf".to_string();
         if let Ok(OS::Linux) = OS::query() {
           js_args.push(&JsValue::from_str("-i0"));
           js_args.push(&JsValue::from_str("-o0"));
